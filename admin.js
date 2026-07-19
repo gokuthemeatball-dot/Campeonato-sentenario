@@ -47,7 +47,7 @@ document.querySelector('#postButton').addEventListener('click', async () => {
   const editor = document.querySelector('#postEditor');
   const message = editor.value.trim(); if (!message) return;
   const { error } = await tournamentDb.from('community_posts').insert({ message });
-  if (error) { alert('Could not publish post.'); return; }
+  if (error) { alert(`Could not publish post: ${error.message}`); return; }
   editor.value = ''; loadDashboard();
 });
 loadDashboard();

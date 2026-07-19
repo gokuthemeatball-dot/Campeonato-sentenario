@@ -13,15 +13,15 @@ document.querySelector('#registrationForm input[name="age"]')?.setAttribute('min
 
 function setSpanishText() {
   const strings = {
-    'Player registration': 'Registro de jugadores', 'Tournament info': 'Información del torneo', 'Organizer Desk': 'Panel de organizadores',
+    'Player registration': 'Registro de jugadores', 'Registration': 'Registro', 'Posts': 'Publicaciones', 'Rules': 'Reglas', 'Tournament info': 'Información del torneo', 'Organizer Desk': 'Panel de organizadores',
     'Home': 'Inicio', 'Football tournament • Your city': 'Torneo de fútbol • Tu ciudad',
     'PLAY FOR<br><em>THE CUP.</em>': 'JUEGA POR<br><em>LA COPA.</em>', 'TEAM<br><em>REGISTRATION</em>': 'REGISTRO<br><em>DE EQUIPOS</em>',
     'Build your squad. Bring your game. Take home the title.': 'Forma tu equipo. Da lo mejor. Llévate el título.',
     'Register your team <span>→</span>': 'Regístrate <span>→</span>', 'Register now <span>→</span>': 'Regístrate ahora <span>→</span>',
     'When': 'Cuándo', 'Where': 'Dónde', 'Entry': 'Entrada', 'PLAYER REGISTRATION': 'REGISTRO DE JUGADORES',
-    'ANNOUNCEMENTS': 'ANUNCIOS', 'TOURNAMENT INFO': 'INFORMACIÓN DEL TORNEO', 'TOURNAMENT RULES': 'REGLAS DEL TORNEO',
+    'ANNOUNCEMENTS': 'ANUNCIOS', 'TOURNAMENT INFO': 'INFORMACIÓN DEL TORNEO', 'TOURNAMENT RULES': 'REGLAS DEL TORNEO', 'REGISTRATION': 'REGISTRO', 'POSTS': 'PUBLICACIONES', 'RULES': 'REGLAS',
     'Players age 14 and older': 'Jugadores de 14 años o más', 'News from the organizers': 'Noticias de los organizadores',
-    'Tournament details': 'Detalles del torneo', 'Date and time will be announced.': 'La fecha y hora se anunciarán.',
+    'Tournament details': 'Detalles del torneo', 'Read before playing': 'Lee antes de jugar', 'Rules will be posted by the organizers soon.': 'Los organizadores publicarán las reglas pronto.', 'No posts yet.': 'Aún no hay publicaciones.', 'Date and time will be announced.': 'La fecha y hora se anunciarán.',
     'Location will be announced.': 'El lugar se anunciará.', '$5 per player': '$5 por jugador', 'Cash App accepted': 'Se acepta Cash App',
     'Questions? Contact the tournament organizers.': '¿Preguntas? Contacta a los organizadores del torneo.',
     'REGISTER<br><em>TO PLAY</em>': 'REGÍSTRATE<br><em>PARA JUGAR</em>', 'Registration is $5 per player. Players must be age 14 or older.': 'El registro cuesta $5 por jugador. Los jugadores deben tener 14 años o más.',
@@ -50,8 +50,7 @@ async function loadRemoteContent() {
   const { data, error } = await tournamentDb.from('site_content').select('content_key, content_value');
   if (error || !data) return;
   const values = Object.fromEntries(data.map(row => [row.content_key, row.content_value]));
-  if (rulesContent) rulesContent.innerHTML = values.rules ? `<ol>${values.rules.split('\n').filter(Boolean).map(rule => `<li>${escapeHtml(rule)}</li>`).join('')}</ol>` : '';
-  if (document.querySelector('#rulesSection')) document.querySelector('#rulesSection').hidden = !values.rules?.trim();
+  if (rulesContent) rulesContent.innerHTML = values.rules?.trim() ? `<ol>${values.rules.split('\n').filter(Boolean).map(rule => `<li>${escapeHtml(rule)}</li>`).join('')}</ol>` : '<p>Rules will be posted by the organizers soon.</p>';
   if (values.update && updatesContent) updatesContent.innerHTML = `<article><p class="date">TOURNAMENT UPDATE</p><h3>${escapeHtml(values.update)}</h3></article>`;
   if (values.when && document.querySelector('#whenContent')) document.querySelector('#whenContent').innerHTML = escapeHtml(values.when).replace(/\n/g, '<br>');
   if (values.where && document.querySelector('#whereContent')) document.querySelector('#whereContent').innerHTML = escapeHtml(values.where).replace(/\n/g, '<br>');
