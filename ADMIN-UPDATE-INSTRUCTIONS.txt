@@ -29,3 +29,7 @@ sign in again before editing or deleting posts, rules, or tournament info.
 
 Both approved organizer accounts appear in the Organizer team area. They use
 the same /admin.html link and manage the same shared posts, rules, and info.
+
+On mobile, the Organizer Desk button is shown in the public-site navigation
+only after an approved admin is signed in. Published posts appear below the
+post editor with Save and Delete controls sized for a phone screen.

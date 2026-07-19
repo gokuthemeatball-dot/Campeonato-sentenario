@@ -35,6 +35,11 @@
   font-size: .85rem;
 }
 
+.published-posts-heading { margin: 30px 0 8px; }
+
 @media (max-width: 700px) {
   .organizer-identity { margin-top: 18px; text-align: left; }
+  .admin-actions { align-items: stretch; flex-direction: column; }
+  .admin-actions .button { justify-content: center; width: 100%; }
+  .admin-post textarea { min-height: 120px; }
 }
