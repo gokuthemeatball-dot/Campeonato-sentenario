@@ -21,12 +21,14 @@ function setSpanishText() {
     'When': 'Cuándo', 'Where': 'Dónde', 'Entry': 'Entrada', 'PLAYER REGISTRATION': 'REGISTRO DE JUGADORES',
     'ANNOUNCEMENTS': 'ANUNCIOS', 'TOURNAMENT INFO': 'INFORMACIÓN DEL TORNEO', 'TOURNAMENT RULES': 'REGLAS DEL TORNEO', 'REGISTRATION': 'REGISTRO', 'POSTS': 'PUBLICACIONES', 'RULES': 'REGLAS',
     'Players age 14 and older': 'Jugadores de 14 años o más', 'News from the organizers': 'Noticias de los organizadores',
+    'Register to play, read posts, and check the tournament rules.': 'Regístrate para jugar, lee las publicaciones y consulta las reglas del torneo.',
+    'Choose your national team and playing position, then pay $5 to register.': 'Elige tu selección nacional y posición de juego, luego paga $5 para registrarte.',
     'Tournament details': 'Detalles del torneo', 'Read before playing': 'Lee antes de jugar', 'Rules will be posted by the organizers soon.': 'Los organizadores publicarán las reglas pronto.', 'No posts yet.': 'Aún no hay publicaciones.', 'Date and time will be announced.': 'La fecha y hora se anunciarán.',
     'Location will be announced.': 'El lugar se anunciará.', '$5 per player': '$5 por jugador', 'Cash App accepted': 'Se acepta Cash App',
-    'Questions? Contact the tournament organizers.': '¿Preguntas? Contacta a los organizadores del torneo.',
+    'Questions? Contact the tournament organizers.': '¿Preguntas? Contacta a los organizadores del torneo.', 'COMMUNITY UPDATE': 'ACTUALIZACIÓN DE LA COMUNIDAD', 'ORGANIZER POST': 'PUBLICACIÓN DEL ORGANIZADOR',
     'REGISTER<br><em>TO PLAY</em>': 'REGÍSTRATE<br><em>PARA JUGAR</em>', 'Registration is $5 per player. Players must be age 14 or older.': 'El registro cuesta $5 por jugador. Los jugadores deben tener 14 años o más.',
     'Choose carefully': 'Elige con cuidado', 'Enter your real first and last name, choose your team and position, then pay the $5 entry fee with Cash App.': 'Escribe tu nombre y apellido reales, elige tu equipo y posición, y paga la cuota de $5 con Cash App.',
-    'Your team selection is locked.': 'Tu selección de equipo está bloqueada.', 'Register <span>→</span>': 'Registrarse <span>→</span>'
+    'Your team selection is locked.': 'Tu selección de equipo está bloqueada.', 'Use your real first and last name. Nicknames are not accepted.': 'Usa tu nombre y apellido reales. No se aceptan apodos.', 'I understand that my registration is not complete until I pay $5.': 'Entiendo que mi registro no está completo hasta que pague $5.', 'Register <span>→</span>': 'Registrarse <span>→</span>'
   };
   document.querySelectorAll('a, button, p, h1, h2, h3').forEach(el => { if (strings[el.innerHTML.trim()]) el.innerHTML = strings[el.innerHTML.trim()]; });
   document.querySelectorAll('label').forEach(label => { const text = label.firstChild; if (!text || text.nodeType !== Node.TEXT_NODE) return; const labels = {'Full legal name':'Nombre y apellido legal','Age (14 or older)':'Edad (14 años o más)','Playing position':'Posición de juego','Select your national team':'Selecciona tu selección nacional','Select your team':'Selecciona tu equipo','Organizer email':'Correo electrónico del organizador','Rules (one rule per line)':'Reglas (una regla por línea)','Update title':'Título de actualización'}; const current = text.nodeValue.trim(); if (labels[current]) text.nodeValue = labels[current]; });

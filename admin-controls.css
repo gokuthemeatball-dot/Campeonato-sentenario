@@ -36,10 +36,13 @@
 }
 
 .published-posts-heading { margin: 30px 0 8px; }
+.admin-header-actions { display: flex; gap: 10px; }
 
 @media (max-width: 700px) {
   .organizer-identity { margin-top: 18px; text-align: left; }
   .admin-actions { align-items: stretch; flex-direction: column; }
   .admin-actions .button { justify-content: center; width: 100%; }
   .admin-post textarea { min-height: 120px; }
+  .admin-header { align-items: flex-start; gap: 14px; }
+  .admin-header-actions { align-items: stretch; flex-direction: column; }
 }

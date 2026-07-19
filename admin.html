@@ -10,7 +10,7 @@
     <link rel="stylesheet" href="style.css" /><link rel="stylesheet" href="admin.css" /><link rel="stylesheet" href="admin-controls.css" />
   </head>
   <body class="admin-page">
-    <header class="admin-header"><a class="brand" href="index.html">CAMPEONATO <span>CENTENARIO</span></a><button id="signOutButton" hidden>Sign out</button></header>
+    <header class="admin-header"><a class="brand" href="index.html">CAMPEONATO <span>CENTENARIO</span></a><div class="admin-header-actions"><button id="adminLanguageButton" type="button">Español</button><button id="signOutButton" hidden>Sign out</button></div></header>
     <main class="admin-main">
       <section id="loginView" class="admin-card"><p class="eyebrow">Private organizer access</p><h1>ORGANIZER<br /><em>DESK</em></h1><p>Use your organizer email to sign in. Your session stays signed in on this device.</p><label>Organizer email<input id="adminEmail" type="email" placeholder="you@email.com" /></label><button class="button button-primary" id="loginButton">Send sign-in link <span>→</span></button><p class="message" id="loginMessage"></p></section>
       <section id="dashboard" hidden><div class="dashboard-heading"><div><p class="eyebrow">Private organizer access</p><h1>ORGANIZER<br /><em>DESK</em></h1></div><div class="organizer-identity"><p id="signedInAs"></p><p><strong>Organizer team</strong></p><div id="organizerTeam"></div></div></div>
@@ -20,6 +20,6 @@
         <div class="admin-card"><h2>COMMUNITY POSTS</h2><label>New post message<textarea id="postEditor" rows="5" placeholder="Share an announcement with everyone."></textarea></label><button class="button button-primary" id="postButton">Publish post</button><p class="message" id="postMessage" role="status"></p><h3 class="published-posts-heading">PUBLISHED POSTS</h3><div id="adminPosts"></div></div></section>
       </section>
     </main>
-    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script><script src="supabase.js"></script><script src="admin.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script><script src="supabase.js"></script><script src="admin-language.js"></script><script src="admin.js"></script>
   </body>
 </html>

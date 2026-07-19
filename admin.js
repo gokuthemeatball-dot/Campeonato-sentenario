@@ -48,6 +48,7 @@ async function loadDashboard() {
   document.querySelector('#moneyTotal').textContent = `$${(registrations || []).length * 5}`;
   document.querySelector('#registrationList').innerHTML = registrations?.length ? registrations.map(player => `<p><strong>${safe(player.player_name)}</strong> · ${safe(player.team)} · ${safe(player.position || 'Position not set')} · age ${safe(player.player_age)}</p>`).join('') : 'No registrations yet.';
   renderPosts(posts);
+  window.translateAdmin?.();
 }
 
 document.querySelector('#loginButton').addEventListener('click', async () => {

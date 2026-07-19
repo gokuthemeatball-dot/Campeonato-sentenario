@@ -33,3 +33,6 @@ the same /admin.html link and manage the same shared posts, rules, and info.
 On mobile, the Organizer Desk button is shown in the public-site navigation
 only after an approved admin is signed in. Published posts appear below the
 post editor with Save and Delete controls sized for a phone screen.
+
+The public pages and Organizer Desk include English/Spanish interface controls.
+Posts and rules are shown in the language in which the organizers write them.
