@@ -91,10 +91,15 @@ function validRealName(name) {
   const normalized = name.trim().replace(/\s+/g, ' ');
   const parts = normalized.split(' ');
   const blocked = ['test test', 'none none', 'no name', 'your name', 'first last', 'name name', 'john doe', 'jane doe', 'asdf asdf', 'fake name'];
+  const blockedWords = [
+    'pito', 'pene', 'verga', 'puta', 'puto', 'culo', 'mierda', 'cabron', 'cabrón',
+    'fuck', 'fucker', 'fucking', 'shit', 'bitch', 'asshole', 'dick', 'penis', 'porn'
+  ];
   return parts.length >= 2 && parts.length <= 5
     && normalized.length >= 5 && normalized.length <= 80
     && parts.every(part => /^[\p{L}][\p{L}'’-]{1,29}$/u.test(part))
     && !blocked.includes(normalized.toLowerCase())
+    && !parts.some(part => blockedWords.includes(part.toLowerCase()))
     && !/(.)\1{2,}/iu.test(normalized.replace(/\s/g, ''));
 }
 
@@ -171,13 +176,29 @@ document.querySelector('#registrationForm')?.addEventListener('submit', async (e
   const form = new FormData(event.currentTarget);
   const playerName = form.get('playerName').trim();
   if (!validRealName(playerName)) {
-    alert('Please enter your real first and last name using letters only.'); return;
+    alert(isSpanish
+      ? 'Escribe tu nombre y apellido reales. No se permiten apodos, nombres falsos ni palabras inapropiadas.'
+      : 'Enter your real first and last name. Nicknames, fake names, and inappropriate words are not allowed.');
+    return;
   }
   const { error } = await tournamentDb.from('registrations').insert({
     player_name: playerName, player_age: Number(form.get('age')), position: form.get('position'), team: form.get('lockedTeam')
   });
   if (error) {
-    alert(error.message?.includes('TEAM_FULL') ? 'That team already has 6 players. Please reload and choose another team.' : 'Registration could not be saved yet. Please try again.');
+    const errorMessage = error.message || '';
+    if (errorMessage.includes('TEAM_FULL')) {
+      alert(isSpanish
+        ? 'Ese equipo ya tiene 6 jugadores. Recarga la página y elige otro equipo.'
+        : 'That team already has 6 players. Please reload and choose another team.');
+    } else if (errorMessage.includes('INVALID_REAL_NAME')) {
+      alert(isSpanish
+        ? 'Usa tu nombre y apellido reales. No se permiten apodos, nombres falsos ni palabras inapropiadas.'
+        : 'Use your real first and last name. Nicknames, fake names, and inappropriate words are not allowed.');
+    } else {
+      alert(isSpanish
+        ? 'No se pudo guardar el registro. Inténtalo de nuevo.'
+        : 'Registration could not be saved yet. Please try again.');
+    }
     await loadTeamAvailability();
     return;
   }
@@ -198,12 +219,12 @@ document.querySelector('#questionForm')?.addEventListener('submit', async (event
   const senderName = String(form.get('questionName') || '').trim();
   const question = String(form.get('questionMessage') || '').trim();
   const status = document.querySelector('#questionMessage');
-  if (!validRealName(senderName)) { status.textContent = 'Please use your real first and last name.'; return; }
-  if (question.length < 5) { status.textContent = 'Please enter a complete question.'; return; }
+  if (!validRealName(senderName)) { status.textContent = isSpanish ? 'Usa tu nombre y apellido reales, sin apodos ni palabras inapropiadas.' : 'Use your real first and last name, without nicknames or inappropriate words.'; return; }
+  if (question.length < 5) { status.textContent = isSpanish ? 'Escribe una pregunta completa.' : 'Please enter a complete question.'; return; }
   const { error } = await tournamentDb.from('player_questions').insert({ sender_name: senderName, question });
-  if (error) { status.textContent = 'Your question could not be sent. Please try again.'; return; }
+  if (error) { status.textContent = isSpanish ? 'No se pudo enviar tu pregunta. Inténtalo de nuevo.' : 'Your question could not be sent. Please try again.'; return; }
   event.currentTarget.reset();
-  status.textContent = 'Your question was sent to the organizers.';
+  status.textContent = isSpanish ? 'Tu pregunta fue enviada a los organizadores.' : 'Your question was sent to the organizers.';
 });
 document.querySelector('#adminButton')?.addEventListener('click', () => adminDialog.showModal());
 document.querySelectorAll('[data-close]').forEach(button => button.addEventListener('click', () => document.querySelector(`#${button.dataset.close}`).close()));

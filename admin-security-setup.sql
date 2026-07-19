@@ -137,6 +137,17 @@ begin
     raise exception 'INVALID_REAL_NAME' using errcode = 'P0001';
   end if;
 
+  if exists (
+    select 1
+    from regexp_split_to_table(lower(trim(new.player_name)), E'\\s+') as name_word
+    where name_word in (
+      'pito', 'pene', 'verga', 'puta', 'puto', 'culo', 'mierda', 'cabron', 'cabrón',
+      'fuck', 'fucker', 'fucking', 'shit', 'bitch', 'asshole', 'dick', 'penis', 'porn'
+    )
+  ) then
+    raise exception 'INVALID_REAL_NAME' using errcode = 'P0001';
+  end if;
+
   perform pg_advisory_xact_lock(hashtext(lower(new.team)));
   if (select count(*) from public.registrations where lower(team) = lower(new.team)) >= 6 then
     raise exception 'TEAM_FULL' using errcode = 'P0001';
