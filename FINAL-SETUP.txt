@@ -1,0 +1,25 @@
+CAMPEONATO CENTENARIO — FINAL UPDATE
+
+Upload these website files to the main folder of your GitHub repository:
+index.html
+registration.html
+style.css
+script.js
+supabase.js
+admin.html
+admin.js
+admin.css
+public-layout.css
+
+DO NOT upload the .sql files to GitHub.
+
+In Supabase SQL Editor, run player-position-setup.sql once.
+If you have not already done it, also run community-posts-setup.sql once.
+
+The public website has three sections:
+1. Player Registration — $5 Cash App payment, real-name check, age 14+, position, locked team choice.
+2. Announcements — public posts.
+3. Tournament Info — organizers control date, location, and rules.
+
+The private Organizer Desk is:
+https://gokuthemeatball-dot.github.io/Campeonato-sentenario/admin.html

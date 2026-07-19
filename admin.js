@@ -13,7 +13,7 @@ async function loadDashboard() {
   document.querySelector('#signOutButton').hidden = false;
   document.querySelector('#signedInAs').textContent = session.user.email;
   const [{ data: registrations }, { data: content }, { data: posts }] = await Promise.all([
-    tournamentDb.from('registrations').select('player_name, player_age, team, created_at').order('created_at', { ascending: false }),
+    tournamentDb.from('registrations').select('player_name, player_age, position, team, created_at').order('created_at', { ascending: false }),
     tournamentDb.from('site_content').select('content_key, content_value'),
     tournamentDb.from('community_posts').select('message, created_at').order('created_at', { ascending: false })
   ]);
@@ -24,7 +24,7 @@ async function loadDashboard() {
   document.querySelector('#updateEditor').value = values.update || '';
   document.querySelector('#registrationCount').textContent = (registrations || []).length;
   document.querySelector('#moneyTotal').textContent = `$${(registrations || []).length * 5}`;
-  document.querySelector('#registrationList').innerHTML = registrations?.length ? registrations.map(player => `<p><strong>${safe(player.player_name)}</strong> · ${safe(player.team)} · age ${safe(player.player_age)}</p>`).join('') : 'No registrations yet.';
+  document.querySelector('#registrationList').innerHTML = registrations?.length ? registrations.map(player => `<p><strong>${safe(player.player_name)}</strong> · ${safe(player.team)} · ${safe(player.position || 'Position not set')} · age ${safe(player.player_age)}</p>`).join('') : 'No registrations yet.';
   document.querySelector('#adminPosts').innerHTML = posts?.length ? posts.map(post => `<p class="post-item">${safe(post.message)}</p>`).join('') : '';
 }
 
