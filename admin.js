@@ -216,9 +216,9 @@ document.querySelector('#saveTestModeButton').addEventListener('click', async ()
   const accessCode = document.querySelector('#testAccessCode').value.trim();
   const message = document.querySelector('#testModeMessage');
   if (accessCode.length < 4) { message.textContent = 'Use an access code with at least 4 characters.'; return; }
-  const { error } = await tournamentDb.from('test_settings').update({ enabled, access_code: accessCode }).eq('id', true);
-  if (!error && !enabled) await tournamentDb.from('test_access_sessions').delete().neq('tester_token', '');
-  message.textContent = error ? 'Could not save Test Mode.' : enabled ? 'Test Mode is ON. Share the tester link and access code.' : 'Test Mode is OFF. Tester access is blocked.';
+  const { data: saved, error } = await tournamentDb.rpc('set_test_mode', { new_enabled: enabled, new_access_code: accessCode });
+  message.textContent = error || saved !== true ? `Could not save Test Mode${error?.message ? `: ${error.message}` : '.'}` : enabled ? 'Test Mode is ON. Share the tester link and access code.' : 'Test Mode is OFF. Tester access is blocked and both tester slots were reset.';
+  if (!error && saved === true) loadDashboard();
 });
 document.querySelector('#clearTestDataButton').addEventListener('click', async () => {
   if (!window.confirm('Delete all unofficial test registrations?')) return;
