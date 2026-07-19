@@ -20,6 +20,21 @@ function renderPosts(posts) {
     </article>`).join('');
 }
 
+function renderQuestions(questions) {
+  const container = document.querySelector('#questionList');
+  if (!questions?.length) { container.innerHTML = '<p>No questions yet.</p>'; return; }
+  container.innerHTML = questions.map(item => `
+    <article class="question-item" data-question-id="${item.id}">
+      <p><strong>${safe(item.sender_name)}</strong> · ${new Date(item.created_at).toLocaleString()}</p>
+      <blockquote>${safe(item.question)}</blockquote>
+      <label>Organizer reply<textarea class="question-reply" rows="4" maxlength="1000">${safe(item.organizer_reply || '')}</textarea></label>
+      <div class="admin-actions">
+        <button class="button button-small" type="button" data-action="save-reply">Save and publish reply</button>
+        <button class="button button-small button-danger" type="button" data-action="delete-question">Delete question</button>
+      </div>
+    </article>`).join('');
+}
+
 async function loadDashboard() {
   const { data: { session } } = await tournamentDb.auth.getSession();
   if (!session || !isOrganizer(session.user.email)) {
@@ -34,10 +49,11 @@ async function loadDashboard() {
   document.querySelector('#organizerTeam').innerHTML = organizerEmails
     .map(email => `<span class="organizer-chip">${safe(email)}</span>`)
     .join('');
-  const [{ data: registrations }, { data: content }, { data: posts }] = await Promise.all([
+  const [{ data: registrations }, { data: content }, { data: posts }, { data: questions }] = await Promise.all([
     tournamentDb.from('registrations').select('player_name, player_age, position, team, created_at').order('created_at', { ascending: false }),
     tournamentDb.from('site_content').select('content_key, content_value'),
-    tournamentDb.from('community_posts').select('id, message, created_at').order('created_at', { ascending: false })
+    tournamentDb.from('community_posts').select('id, message, created_at').order('created_at', { ascending: false }),
+    tournamentDb.from('player_questions').select('id, sender_name, question, organizer_reply, replied_at, created_at').order('created_at', { ascending: false })
   ]);
   const values = Object.fromEntries((content || []).map(row => [row.content_key, row.content_value]));
   document.querySelector('#whenEditor').value = values.when || '';
@@ -48,6 +64,7 @@ async function loadDashboard() {
   document.querySelector('#moneyTotal').textContent = `$${(registrations || []).length * 5}`;
   document.querySelector('#registrationList').innerHTML = registrations?.length ? registrations.map(player => `<p><strong>${safe(player.player_name)}</strong> · ${safe(player.team)} · ${safe(player.position || 'Position not set')} · age ${safe(player.player_age)}</p>`).join('') : 'No registrations yet.';
   renderPosts(posts);
+  renderQuestions(questions);
   window.translateAdmin?.();
 }
 
@@ -118,6 +135,26 @@ document.querySelector('#adminPosts').addEventListener('click', async (event) =>
     const { error } = await tournamentDb.from('community_posts').delete().eq('id', id);
     message.textContent = error ? 'Could not delete the post.' : 'Post deleted.';
     if (!error) loadDashboard();
+  }
+});
+document.querySelector('#questionList').addEventListener('click', async (event) => {
+  const button = event.target.closest('button[data-action]');
+  if (!button) return;
+  const item = button.closest('[data-question-id]');
+  const id = Number(item.dataset.questionId);
+  if (button.dataset.action === 'save-reply') {
+    const reply = item.querySelector('.question-reply').value.trim();
+    if (reply.length < 2) { window.alert('Enter a reply before publishing.'); return; }
+    const { error } = await tournamentDb.from('player_questions').update({ organizer_reply: reply, replied_at: new Date().toISOString() }).eq('id', id);
+    if (error) { window.alert('Could not publish the reply.'); return; }
+    window.alert('Reply published without showing the player name.');
+    loadDashboard();
+  }
+  if (button.dataset.action === 'delete-question') {
+    if (!window.confirm('Delete this question?')) return;
+    const { error } = await tournamentDb.from('player_questions').delete().eq('id', id);
+    if (error) { window.alert('Could not delete the question.'); return; }
+    loadDashboard();
   }
 });
 loadDashboard();

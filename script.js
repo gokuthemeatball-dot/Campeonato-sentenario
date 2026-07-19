@@ -23,7 +23,7 @@ function setSpanishText() {
     'Register your team <span>→</span>': 'Regístrate <span>→</span>', 'Register now <span>→</span>': 'Regístrate ahora <span>→</span>',
     'When': 'Cuándo', 'Where': 'Dónde', 'Entry': 'Entrada', 'PLAYER REGISTRATION': 'REGISTRO DE JUGADORES',
     'ANNOUNCEMENTS': 'ANUNCIOS', 'TOURNAMENT INFO': 'INFORMACIÓN DEL TORNEO', 'TOURNAMENT RULES': 'REGLAS DEL TORNEO', 'REGISTRATION': 'REGISTRO', 'POSTS': 'PUBLICACIONES', 'RULES': 'REGLAS',
-    'Players age 14 and older': 'Jugadores de 14 años o más', 'News from the organizers': 'Noticias de los organizadores',
+    'Players age 14 and older': 'Jugadores de 14 años o más', 'News from the organizers': 'Noticias de los organizadores', 'Ask the organizers': 'Pregunta a los organizadores', 'QUESTIONS': 'PREGUNTAS', 'ANSWERED QUESTIONS': 'PREGUNTAS RESPONDIDAS', 'No answers yet.': 'Aún no hay respuestas.', 'Send a question to the tournament organizers.': 'Envía una pregunta a los organizadores del torneo.',
     'Register to play, read posts, and check the tournament rules.': 'Regístrate para jugar, lee las publicaciones y consulta las reglas del torneo.',
     'Choose your national team and playing position, then pay $5 to register.': 'Elige tu selección nacional y posición de juego, luego paga $5 para registrarte.',
     'Tournament details': 'Detalles del torneo', 'Read before playing': 'Lee antes de jugar', 'Rules will be posted by the organizers soon.': 'Los organizadores publicarán las reglas pronto.', 'No posts yet.': 'Aún no hay publicaciones.', 'Date and time will be announced.': 'La fecha y hora se anunciarán.',
@@ -31,10 +31,10 @@ function setSpanishText() {
     'Questions? Contact the tournament organizers.': '¿Preguntas? Contacta a los organizadores del torneo.', 'COMMUNITY UPDATE': 'ACTUALIZACIÓN DE LA COMUNIDAD', 'ORGANIZER POST': 'PUBLICACIÓN DEL ORGANIZADOR',
     'REGISTER<br><em>TO PLAY</em>': 'REGÍSTRATE<br><em>PARA JUGAR</em>', 'Registration is $5 per player. Players must be age 14 or older.': 'El registro cuesta $5 por jugador. Los jugadores deben tener 14 años o más.',
     'Choose carefully': 'Elige con cuidado', 'Enter your real first and last name, choose your team and position, then pay the $5 entry fee with Cash App.': 'Escribe tu nombre y apellido reales, elige tu equipo y posición, y paga la cuota de $5 con Cash App.',
-    'Your team selection is locked.': 'Tu selección de equipo está bloqueada.', 'Use your real first and last name. Nicknames are not accepted.': 'Usa tu nombre y apellido reales. No se aceptan apodos.', 'I understand that my registration is not complete until I pay $5.': 'Entiendo que mi registro no está completo hasta que pague $5.', 'Register <span>→</span>': 'Registrarse <span>→</span>'
+    'Your team selection is locked. Reload this page to choose a different team before registering.': 'Tu selección de equipo está bloqueada. Recarga la página para elegir otro equipo antes de registrarte.', 'Use your real first and last name. Nicknames, repeated letters, and fake names are not accepted.': 'Usa tu nombre y apellido reales. No se aceptan apodos, letras repetidas ni nombres falsos.', 'I confirm that I entered my real legal name, not a nickname.': 'Confirmo que ingresé mi nombre legal real, no un apodo.', 'I understand that my registration is not complete until I pay $5.': 'Entiendo que mi registro no está completo hasta que pague $5.', 'Register <span>→</span>': 'Registrarse <span>→</span>', 'Send question <span>→</span>': 'Enviar pregunta <span>→</span>'
   };
   document.querySelectorAll('a, button, p, h1, h2, h3, footer span').forEach(el => { if (strings[el.innerHTML.trim()]) el.innerHTML = strings[el.innerHTML.trim()]; });
-  document.querySelectorAll('label').forEach(label => { const text = label.firstChild; if (!text || text.nodeType !== Node.TEXT_NODE) return; const labels = {'Full legal name':'Nombre y apellido legal','Age (14 or older)':'Edad (14 años o más)','Playing position':'Posición de juego','Select your national team':'Selecciona tu selección nacional','Select your team':'Selecciona tu equipo','Organizer email':'Correo electrónico del organizador','Rules (one rule per line)':'Reglas (una regla por línea)','Update title':'Título de actualización'}; const current = text.nodeValue.trim(); if (labels[current]) text.nodeValue = labels[current]; });
+  document.querySelectorAll('label').forEach(label => { const text = label.firstChild; if (!text || text.nodeType !== Node.TEXT_NODE) return; const labels = {'Full legal name':'Nombre y apellido legal','Age (14 or older)':'Edad (14 años o más)','Playing position':'Posición de juego','Select your national team':'Selecciona tu selección nacional','Select your team':'Selecciona tu equipo','Your full name':'Tu nombre completo','Your question':'Tu pregunta','Organizer email':'Correo electrónico del organizador','Rules (one rule per line)':'Reglas (una regla por línea)','Update title':'Título de actualización'}; const current = text.nodeValue.trim(); if (labels[current]) text.nodeValue = labels[current]; });
   const countryNames = {Spain:'España',England:'Inglaterra',Belgium:'Bélgica',Netherlands:'Países Bajos',Germany:'Alemania',Croatia:'Croacia',Italy:'Italia',Mexico:'México','U.S.A.':'Estados Unidos',Japan:'Japón',Morocco:'Marruecos'};
   document.querySelectorAll('#teamSelect option').forEach(option => { if (countryNames[option.textContent]) option.textContent = countryNames[option.textContent]; });
   const fallbackStrings = {
@@ -87,6 +87,31 @@ function displayContent() {
   if (where && document.querySelector('#whereContent')) document.querySelector('#whereContent').innerHTML = escapeHtml(where).replace(/\n/g, '<br>');
 }
 function escapeHtml(text) { const node = document.createElement('div'); node.textContent = text; return node.innerHTML; }
+function validRealName(name) {
+  const normalized = name.trim().replace(/\s+/g, ' ');
+  const parts = normalized.split(' ');
+  const blocked = ['test test', 'none none', 'no name', 'your name', 'first last', 'name name', 'john doe', 'jane doe', 'asdf asdf', 'fake name'];
+  return parts.length >= 2 && parts.length <= 5
+    && normalized.length >= 5 && normalized.length <= 80
+    && parts.every(part => /^[\p{L}][\p{L}'’-]{1,29}$/u.test(part))
+    && !blocked.includes(normalized.toLowerCase())
+    && !/(.)\1{2,}/iu.test(normalized.replace(/\s/g, ''));
+}
+
+async function loadTeamAvailability() {
+  const select = document.querySelector('#teamSelect');
+  if (!select) return;
+  const { data, error } = await tournamentDb.rpc('team_availability');
+  if (error || !data) return;
+  const counts = Object.fromEntries(data.map(row => [row.team, Number(row.player_count)]));
+  [...select.options].forEach(option => {
+    if (!option.value) return;
+    const count = counts[option.value] || 0;
+    option.dataset.originalLabel ||= option.textContent;
+    option.disabled = count >= 6;
+    option.textContent = `${option.dataset.originalLabel} — ${count >= 6 ? (isSpanish ? 'LLENO' : 'FULL') : `${6 - count} ${isSpanish ? 'lugares disponibles' : 'spots left'}`}`;
+  });
+}
 async function loadRemoteContent() {
   const { data, error } = await tournamentDb.from('site_content').select('content_key, content_value');
   if (error || !data) return;
@@ -103,6 +128,17 @@ async function loadCommunityPosts() {
   if (error || !data) return;
   container.innerHTML = data.length ? data.map(post => `<article><p class="date">${isSpanish ? 'ACTUALIZACIÓN DE LA COMUNIDAD' : 'COMMUNITY UPDATE'}</p><h3>${escapeHtml(post.message)}</h3></article>`).join('') : `<p>${isSpanish ? 'Aún no hay publicaciones.' : 'No community posts yet.'}</p>`;
 }
+async function loadAnsweredQuestions() {
+  const container = document.querySelector('#answeredQuestions');
+  if (!container) return;
+  const { data, error } = await tournamentDb.rpc('public_answered_questions');
+  if (error || !data) return;
+  container.innerHTML = data.length ? data.map(item => `
+    <article class="public-answer">
+      <p><strong>${isSpanish ? 'PREGUNTA' : 'QUESTION'}:</strong> ${escapeHtml(item.question)}</p>
+      <p><strong>${isSpanish ? 'RESPUESTA' : 'ANSWER'}:</strong> ${escapeHtml(item.answer)}</p>
+    </article>`).join('') : `<p>${isSpanish ? 'Aún no hay respuestas.' : 'No answers yet.'}</p>`;
+}
 async function showRegistrations() {
   const { data: registrations, error } = await tournamentDb.from('registrations').select('player_name, player_age, team, paid, created_at').order('created_at', { ascending: false });
   if (error) return;
@@ -118,6 +154,8 @@ async function showRegistrations() {
 displayContent();
 loadRemoteContent();
 loadCommunityPosts();
+loadAnsweredQuestions();
+loadTeamAvailability();
 
 async function showOrganizerLink() {
   const link = document.querySelector('#organizerLink');
@@ -132,16 +170,17 @@ document.querySelector('#registrationForm')?.addEventListener('submit', async (e
   event.preventDefault();
   const form = new FormData(event.currentTarget);
   const playerName = form.get('playerName').trim();
-  const nameParts = playerName.split(/\s+/).filter(Boolean);
-  const blockedNames = ['test test', 'none none', 'no name', 'your name', 'first last', 'name name'];
-  const nameIsValid = nameParts.length >= 2 && nameParts.every(part => /^[\p{L}][\p{L}'-]{1,29}$/u.test(part)) && !blockedNames.includes(playerName.toLowerCase()) && !/^(.)\1+$/u.test(nameParts.join(''));
-  if (!nameIsValid) {
+  if (!validRealName(playerName)) {
     alert('Please enter your real first and last name using letters only.'); return;
   }
   const { error } = await tournamentDb.from('registrations').insert({
     player_name: playerName, player_age: Number(form.get('age')), position: form.get('position'), team: form.get('lockedTeam')
   });
-  if (error) { alert('Registration could not be saved yet. Please try again.'); return; }
+  if (error) {
+    alert(error.message?.includes('TEAM_FULL') ? 'That team already has 6 players. Please reload and choose another team.' : 'Registration could not be saved yet. Please try again.');
+    await loadTeamAvailability();
+    return;
+  }
   paymentDialog.showModal();
 });
 document.querySelector('#teamSelect')?.addEventListener('change', (event) => {
@@ -152,6 +191,19 @@ document.querySelector('#teamSelect')?.addEventListener('change', (event) => {
   document.querySelector('#lockedTeam').value = event.target.value;
   event.target.disabled = true;
   document.querySelector('#teamLockMessage').hidden = false;
+});
+document.querySelector('#questionForm')?.addEventListener('submit', async (event) => {
+  event.preventDefault();
+  const form = new FormData(event.currentTarget);
+  const senderName = String(form.get('questionName') || '').trim();
+  const question = String(form.get('questionMessage') || '').trim();
+  const status = document.querySelector('#questionMessage');
+  if (!validRealName(senderName)) { status.textContent = 'Please use your real first and last name.'; return; }
+  if (question.length < 5) { status.textContent = 'Please enter a complete question.'; return; }
+  const { error } = await tournamentDb.from('player_questions').insert({ sender_name: senderName, question });
+  if (error) { status.textContent = 'Your question could not be sent. Please try again.'; return; }
+  event.currentTarget.reset();
+  status.textContent = 'Your question was sent to the organizers.';
 });
 document.querySelector('#adminButton')?.addEventListener('click', () => adminDialog.showModal());
 document.querySelectorAll('[data-close]').forEach(button => button.addEventListener('click', () => document.querySelector(`#${button.dataset.close}`).close()));

@@ -8,7 +8,7 @@
     <link rel="preconnect" href="https://fonts.googleapis.com" />
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
     <link href="https://fonts.googleapis.com/css2?family=Barlow+Condensed:wght@600;700;800&family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet" />
-    <link rel="stylesheet" href="style.css" /><link rel="stylesheet" href="admin.css" /><link rel="stylesheet" href="public-layout.css" /><link rel="stylesheet" href="mobile-organizer.css" />
+    <link rel="stylesheet" href="style.css" /><link rel="stylesheet" href="admin.css" /><link rel="stylesheet" href="public-layout.css" /><link rel="stylesheet" href="mobile-organizer.css" /><link rel="stylesheet" href="feature-controls.css" />
   </head>
   <body>
     <header class="hero" id="home">
@@ -23,6 +23,8 @@
       <section class="public-section updates" id="posts"><p class="eyebrow">News from the organizers</p><h2>POSTS</h2><div id="updatesContent"><p>No posts yet.</p></div><div id="communityPosts"></div></section>
 
       <section class="public-section tournament-info" id="rules"><p class="eyebrow">Read before playing</p><h2>RULES</h2><div id="rulesSection"><div id="rulesContent"><p>Rules will be posted by the organizers soon.</p></div></div></section>
+
+      <section class="public-section questions" id="questions"><p class="eyebrow">Ask the organizers</p><h2>QUESTIONS</h2><p>Send a question to the tournament organizers.</p><form id="questionForm"><label>Your full name<input required name="questionName" maxlength="80" autocomplete="name" /></label><label>Your question<textarea required name="questionMessage" rows="5" maxlength="1000"></textarea></label><button class="button button-primary" type="submit">Send question <span>→</span></button><p class="message" id="questionMessage" role="status"></p></form><div class="answered-questions"><h3>ANSWERED QUESTIONS</h3><div id="answeredQuestions"><p>No answers yet.</p></div></div></section>
     </main>
 
     <footer><span>CENTENNIAL CHAMPIONSHIP</span><p>Questions? Contact the tournament organizers.</p></footer>
@@ -30,7 +32,7 @@
     <dialog id="paymentDialog"><button class="close" data-close="paymentDialog" aria-label="Close">×</button><p class="eyebrow">One last step</p><h2>PAY YOUR ENTRY FEE</h2><p>Open the secure Cash App request to pay <strong>$5 per player</strong>.</p><a class="button button-primary" id="cashAppLink" href="https://cash.app/pay/link/7huvq98i" target="_blank" rel="noreferrer">Pay $5 with Cash App <span>→</span></a></dialog>
 
     <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
-    <script src="supabase.js?v=4"></script>
-    <script src="script.js?v=4"></script>
+    <script src="supabase.js?v=6"></script>
+    <script src="script.js?v=6"></script>
   </body>
 </html>

@@ -10,6 +10,9 @@ admin.html
 admin.js
 admin.css
 admin-controls.css
+admin-language.js
+feature-controls.css
+mobile-organizer.css
 public-layout.css
 
 DO NOT upload the .sql files to GitHub.
