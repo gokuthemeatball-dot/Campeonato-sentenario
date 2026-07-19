@@ -16,6 +16,11 @@ if (positionSelect) {
   positionSelect.disabled = true;
   positionSelect.insertAdjacentHTML('afterend', '<input type="hidden" id="lockedPosition" name="lockedPosition" />');
   positionSelect.closest('label').insertAdjacentHTML('afterend', '<p class="small" id="positionAvailability">Choose a team to see available positions.</p><p class="small" id="positionLockMessage" hidden>Your position selection is locked. Reload this page to choose a different position before registering.</p>');
+  const teamLockMessage = document.querySelector('#teamLockMessage');
+  const positionLabel = positionSelect.closest('label');
+  if (teamLockMessage && positionLabel) {
+    teamLockMessage.after(positionLabel, document.querySelector('#positionAvailability'), document.querySelector('#positionLockMessage'));
+  }
 }
 
 function setSpanishText() {
@@ -131,7 +136,8 @@ async function loadPositionAvailability(team) {
   const limits = { Goalkeeper: 1, Defender: 2, Midfielder: 2, Striker: 1 };
   const { data, error } = await tournamentDb.rpc('position_availability');
   if (error || !data) {
-    if (message) message.textContent = isSpanish ? 'No se pudieron cargar las posiciones.' : 'Positions could not be loaded.';
+    select.disabled = false;
+    if (message) message.textContent = isSpanish ? 'Elige una posición. La disponibilidad se verificará al registrarte.' : 'Choose a position. Availability will be checked when you register.';
     return;
   }
   const counts = Object.fromEntries(data
