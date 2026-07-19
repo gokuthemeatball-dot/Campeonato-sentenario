@@ -5,7 +5,7 @@ const updatesContent = document.querySelector('#updatesContent');
 const storedRules = localStorage.getItem('kickoffRules');
 const storedUpdate = localStorage.getItem('kickoffUpdate');
 const pageEnglish = document.body.innerHTML;
-let isSpanish = false;
+let isSpanish = localStorage.getItem('tournamentLanguage') === 'es';
 
 const playerEmailField = document.querySelector('#registrationForm input[name="email"]');
 playerEmailField?.closest('label').remove();
@@ -13,8 +13,11 @@ document.querySelector('#registrationForm input[name="age"]')?.setAttribute('min
 
 function setSpanishText() {
   const strings = {
+    'CENTENNIAL <span>CHAMPIONSHIP</span>': 'CAMPEONATO <span>CENTENARIO</span>',
+    'CENTENNIAL<br><em>CHAMPIONSHIP</em>': 'CAMPEONATO<br><em>CENTENARIO</em>',
+    'CENTENNIAL CHAMPIONSHIP': 'CAMPEONATO CENTENARIO',
     'Player registration': 'Registro de jugadores', 'Registration': 'Registro', 'Posts': 'Publicaciones', 'Rules': 'Reglas', 'Tournament info': 'Información del torneo', 'Organizer Desk': 'Panel de organizadores',
-    'Home': 'Inicio', 'Football tournament • Your city': 'Torneo de fútbol • Tu ciudad',
+    'Home': 'Inicio', 'Football tournament': 'Torneo de fútbol', 'Football tournament • Your city': 'Torneo de fútbol • Tu ciudad',
     'PLAY FOR<br><em>THE CUP.</em>': 'JUEGA POR<br><em>LA COPA.</em>', 'TEAM<br><em>REGISTRATION</em>': 'REGISTRO<br><em>DE EQUIPOS</em>',
     'Build your squad. Bring your game. Take home the title.': 'Forma tu equipo. Da lo mejor. Llévate el título.',
     'Register your team <span>→</span>': 'Regístrate <span>→</span>', 'Register now <span>→</span>': 'Regístrate ahora <span>→</span>',
@@ -30,12 +33,25 @@ function setSpanishText() {
     'Choose carefully': 'Elige con cuidado', 'Enter your real first and last name, choose your team and position, then pay the $5 entry fee with Cash App.': 'Escribe tu nombre y apellido reales, elige tu equipo y posición, y paga la cuota de $5 con Cash App.',
     'Your team selection is locked.': 'Tu selección de equipo está bloqueada.', 'Use your real first and last name. Nicknames are not accepted.': 'Usa tu nombre y apellido reales. No se aceptan apodos.', 'I understand that my registration is not complete until I pay $5.': 'Entiendo que mi registro no está completo hasta que pague $5.', 'Register <span>→</span>': 'Registrarse <span>→</span>'
   };
-  document.querySelectorAll('a, button, p, h1, h2, h3').forEach(el => { if (strings[el.innerHTML.trim()]) el.innerHTML = strings[el.innerHTML.trim()]; });
+  document.querySelectorAll('a, button, p, h1, h2, h3, footer span').forEach(el => { if (strings[el.innerHTML.trim()]) el.innerHTML = strings[el.innerHTML.trim()]; });
   document.querySelectorAll('label').forEach(label => { const text = label.firstChild; if (!text || text.nodeType !== Node.TEXT_NODE) return; const labels = {'Full legal name':'Nombre y apellido legal','Age (14 or older)':'Edad (14 años o más)','Playing position':'Posición de juego','Select your national team':'Selecciona tu selección nacional','Select your team':'Selecciona tu equipo','Organizer email':'Correo electrónico del organizador','Rules (one rule per line)':'Reglas (una regla por línea)','Update title':'Título de actualización'}; const current = text.nodeValue.trim(); if (labels[current]) text.nodeValue = labels[current]; });
   const countryNames = {Spain:'España',England:'Inglaterra',Belgium:'Bélgica',Netherlands:'Países Bajos',Germany:'Alemania',Croatia:'Croacia',Italy:'Italia',Mexico:'México','U.S.A.':'Estados Unidos',Japan:'Japón',Morocco:'Marruecos'};
   document.querySelectorAll('#teamSelect option').forEach(option => { if (countryNames[option.textContent]) option.textContent = countryNames[option.textContent]; });
+  document.title = document.title.replace('Centennial Championship', 'Campeonato Centenario');
 }
-document.querySelector('#languageButton')?.addEventListener('click', () => { isSpanish = !isSpanish; if (!isSpanish) { document.body.innerHTML = pageEnglish; location.reload(); return; } document.documentElement.lang = 'es'; document.querySelector('#languageButton').textContent = 'English'; setSpanishText(); });
+document.querySelector('#languageButton')?.addEventListener('click', () => {
+  isSpanish = !isSpanish;
+  localStorage.setItem('tournamentLanguage', isSpanish ? 'es' : 'en');
+  if (!isSpanish) { location.reload(); return; }
+  document.documentElement.lang = 'es';
+  document.querySelector('#languageButton').textContent = 'English';
+  setSpanishText();
+});
+if (isSpanish) {
+  document.documentElement.lang = 'es';
+  document.querySelector('#languageButton').textContent = 'English';
+  setSpanishText();
+}
 
 function displayContent() {
   const rules = localStorage.getItem('kickoffRules');
@@ -52,8 +68,8 @@ async function loadRemoteContent() {
   const { data, error } = await tournamentDb.from('site_content').select('content_key, content_value');
   if (error || !data) return;
   const values = Object.fromEntries(data.map(row => [row.content_key, row.content_value]));
-  if (rulesContent) rulesContent.innerHTML = values.rules?.trim() ? `<ol>${values.rules.split('\n').filter(Boolean).map(rule => `<li>${escapeHtml(rule)}</li>`).join('')}</ol>` : '<p>Rules will be posted by the organizers soon.</p>';
-  if (values.update && updatesContent) updatesContent.innerHTML = `<article><p class="date">ORGANIZER POST</p><h3>${escapeHtml(values.update)}</h3></article>`;
+  if (rulesContent) rulesContent.innerHTML = values.rules?.trim() ? `<ol>${values.rules.split('\n').filter(Boolean).map(rule => `<li>${escapeHtml(rule)}</li>`).join('')}</ol>` : `<p>${isSpanish ? 'Los organizadores publicarán las reglas pronto.' : 'Rules will be posted by the organizers soon.'}</p>`;
+  if (values.update && updatesContent) updatesContent.innerHTML = `<article><p class="date">${isSpanish ? 'PUBLICACIÓN DEL ORGANIZADOR' : 'ORGANIZER POST'}</p><h3>${escapeHtml(values.update)}</h3></article>`;
   if (values.when && document.querySelector('#whenContent')) document.querySelector('#whenContent').innerHTML = escapeHtml(values.when).replace(/\n/g, '<br>');
   if (values.where && document.querySelector('#whereContent')) document.querySelector('#whereContent').innerHTML = escapeHtml(values.where).replace(/\n/g, '<br>');
 }
@@ -62,7 +78,7 @@ async function loadCommunityPosts() {
   if (!container) return;
   const { data, error } = await tournamentDb.from('community_posts').select('message, created_at').order('created_at', { ascending: false });
   if (error || !data) return;
-  container.innerHTML = data.length ? data.map(post => `<article><p class="date">COMMUNITY UPDATE</p><h3>${escapeHtml(post.message)}</h3></article>`).join('') : '<p>No community posts yet.</p>';
+  container.innerHTML = data.length ? data.map(post => `<article><p class="date">${isSpanish ? 'ACTUALIZACIÓN DE LA COMUNIDAD' : 'COMMUNITY UPDATE'}</p><h3>${escapeHtml(post.message)}</h3></article>`).join('') : `<p>${isSpanish ? 'Aún no hay publicaciones.' : 'No community posts yet.'}</p>`;
 }
 async function showRegistrations() {
   const { data: registrations, error } = await tournamentDb.from('registrations').select('player_name, player_age, team, paid, created_at').order('created_at', { ascending: false });

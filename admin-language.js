@@ -32,6 +32,10 @@ const adminTranslations = {
 };
 
 function translateAdmin(root = document) {
+  const brand = document.querySelector('.brand');
+  if (brand) brand.innerHTML = adminSpanish
+    ? 'CAMPEONATO <span>CENTENARIO</span>'
+    : 'CENTENNIAL <span>CHAMPIONSHIP</span>';
   root.querySelectorAll('button, p, h2, h3, span').forEach(element => {
     if (!adminEnglish.has(element)) adminEnglish.set(element, element.textContent);
     const english = adminEnglish.get(element).trim();
@@ -49,6 +53,9 @@ function translateAdmin(root = document) {
       : adminLabelEnglish.get(textNode);
   });
   document.documentElement.lang = adminSpanish ? 'es' : 'en';
+  document.title = adminSpanish
+    ? 'Panel de organizadores | Campeonato Centenario'
+    : 'Organizer Desk | Centennial Championship';
   document.querySelector('#adminLanguageButton').textContent = adminSpanish ? 'English' : 'Español';
 }
 
