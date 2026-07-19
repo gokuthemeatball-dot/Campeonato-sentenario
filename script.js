@@ -44,18 +44,10 @@ async function loadRemoteContent() {
   const { data, error } = await tournamentDb.from('site_content').select('content_key, content_value');
   if (error || !data) return;
   const values = Object.fromEntries(data.map(row => [row.content_key, row.content_value]));
-  if (rulesContent) rulesContent.innerHTML = values.rules ? `<ol>${values.rules.split('\n').filter(Boolean).map(rule => `<li>${escapeHtml(rule)}</li>`).join('')}</ol>` : '';
-  if (document.querySelector('#rulesSection')) document.querySelector('#rulesSection').hidden = !values.rules?.trim();
+  if (values.rules && rulesContent) rulesContent.innerHTML = `<ol>${values.rules.split('\n').filter(Boolean).map(rule => `<li>${escapeHtml(rule)}</li>`).join('')}</ol>`;
   if (values.update && updatesContent) updatesContent.innerHTML = `<article><p class="date">TOURNAMENT UPDATE</p><h3>${escapeHtml(values.update)}</h3></article>`;
   if (values.when && document.querySelector('#whenContent')) document.querySelector('#whenContent').innerHTML = escapeHtml(values.when).replace(/\n/g, '<br>');
   if (values.where && document.querySelector('#whereContent')) document.querySelector('#whereContent').innerHTML = escapeHtml(values.where).replace(/\n/g, '<br>');
-}
-async function loadCommunityPosts() {
-  const container = document.querySelector('#communityPosts');
-  if (!container) return;
-  const { data, error } = await tournamentDb.from('community_posts').select('message, created_at').order('created_at', { ascending: false });
-  if (error || !data) return;
-  container.innerHTML = data.length ? data.map(post => `<article><p class="date">COMMUNITY UPDATE</p><h3>${escapeHtml(post.message)}</h3></article>`).join('') : '<p>No community posts yet.</p>';
 }
 async function showRegistrations() {
   const { data: registrations, error } = await tournamentDb.from('registrations').select('player_name, player_age, team, paid, created_at').order('created_at', { ascending: false });
@@ -71,35 +63,21 @@ async function showRegistrations() {
 }
 displayContent();
 loadRemoteContent();
-loadCommunityPosts();
-
-async function showOrganizerLink() {
-  const link = document.querySelector('#organizerLink');
-  if (!link) return;
-  const { data: { session } } = await tournamentDb.auth.getSession();
-  link.hidden = !session || !organizerEmails.includes(session.user.email.toLowerCase());
-}
-showOrganizerLink();
 
 document.querySelector('#registrationForm')?.addEventListener('submit', async (event) => {
   event.preventDefault();
   const form = new FormData(event.currentTarget);
-  const playerName = form.get('playerName').trim();
-  const nameParts = playerName.split(/\s+/).filter(Boolean);
-  if (nameParts.length < 2 || !/^[\p{L}][\p{L}' -]{1,49}$/u.test(playerName)) {
-    alert('Please enter your real first and last name using letters only.'); return;
-  }
   const { error } = await tournamentDb.from('registrations').insert({
-    player_name: playerName, player_age: Number(form.get('age')), position: form.get('position'), team: form.get('lockedTeam')
+    player_name: form.get('playerName'), player_age: Number(form.get('age')), team: form.get('lockedTeam')
   });
   if (error) { alert('Registration could not be saved yet. Please try again.'); return; }
   paymentDialog.showModal();
 });
 document.querySelector('#teamSelect')?.addEventListener('change', (event) => {
   const newTeamField = document.querySelector('#newTeamField');
-  const newTeamInput = newTeamField?.querySelector('input');
-  if (newTeamField) newTeamField.hidden = event.target.value !== 'new';
-  if (newTeamInput) newTeamInput.required = event.target.value === 'new';
+  const newTeamInput = newTeamField.querySelector('input');
+  newTeamField.hidden = event.target.value !== 'new';
+  newTeamInput.required = event.target.value === 'new';
   document.querySelector('#lockedTeam').value = event.target.value;
   event.target.disabled = true;
   document.querySelector('#teamLockMessage').hidden = false;
