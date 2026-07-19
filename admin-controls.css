@@ -25,3 +25,16 @@
 .admin-post textarea { width: 100%; resize: vertical; }
 .post-date { color: #60706a; font-size: .8rem; margin: 7px 0 12px; }
 .message { min-height: 1.4em; margin-top: 12px; }
+
+.organizer-identity { text-align: right; }
+.organizer-identity p { margin: 4px 0; }
+.organizer-chip {
+  display: block;
+  margin-top: 6px;
+  color: #385048;
+  font-size: .85rem;
+}
+
+@media (max-width: 700px) {
+  .organizer-identity { margin-top: 18px; text-align: left; }
+}

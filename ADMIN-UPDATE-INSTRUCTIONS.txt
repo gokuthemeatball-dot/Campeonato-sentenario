@@ -23,3 +23,9 @@ Other visitors cannot enter the dashboard even if they know that address.
 After an approved admin signs in once, the session stays remembered on that
 browser/device and refreshes automatically. Signing out, clearing browser data,
 or using a different device will require signing in again.
+
+The Sign out button immediately closes the private dashboard. The admin must
+sign in again before editing or deleting posts, rules, or tournament info.
+
+Both approved organizer accounts appear in the Organizer team area. They use
+the same /admin.html link and manage the same shared posts, rules, and info.

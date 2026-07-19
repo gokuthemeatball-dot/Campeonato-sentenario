@@ -22,10 +22,18 @@ function renderPosts(posts) {
 
 async function loadDashboard() {
   const { data: { session } } = await tournamentDb.auth.getSession();
-  if (!session || !isOrganizer(session.user.email)) { loginView.hidden = false; dashboard.hidden = true; return; }
+  if (!session || !isOrganizer(session.user.email)) {
+    loginView.hidden = false;
+    dashboard.hidden = true;
+    document.querySelector('#signOutButton').hidden = true;
+    return;
+  }
   loginView.hidden = true; dashboard.hidden = false;
   document.querySelector('#signOutButton').hidden = false;
-  document.querySelector('#signedInAs').textContent = session.user.email;
+  document.querySelector('#signedInAs').textContent = `Signed in as ${session.user.email}`;
+  document.querySelector('#organizerTeam').innerHTML = organizerEmails
+    .map(email => `<span class="organizer-chip">${safe(email)}</span>`)
+    .join('');
   const [{ data: registrations }, { data: content }, { data: posts }] = await Promise.all([
     tournamentDb.from('registrations').select('player_name, player_age, position, team, created_at').order('created_at', { ascending: false }),
     tournamentDb.from('site_content').select('content_key, content_value'),
@@ -65,6 +73,15 @@ document.querySelector('#clearRulesButton').addEventListener('click', async () =
   if (error) { message.textContent = 'Could not remove the rules.'; return; }
   document.querySelector('#rulesEditor').value = '';
   message.textContent = 'All tournament rules were removed.';
+});
+document.querySelector('#clearInfoButton').addEventListener('click', async () => {
+  if (!window.confirm('Clear the date, location, rules, and organizer update?')) return;
+  const keys = ['when', 'where', 'rules', 'update'];
+  const results = await Promise.all(keys.map(key => tournamentDb.from('site_content').update({ content_value: '' }).eq('content_key', key)));
+  const message = document.querySelector('#contentMessage');
+  if (results.some(result => result.error)) { message.textContent = 'Could not clear all tournament information.'; return; }
+  ['#whenEditor', '#whereEditor', '#rulesEditor', '#updateEditor'].forEach(selector => { document.querySelector(selector).value = ''; });
+  message.textContent = 'Tournament information cleared.';
 });
 document.querySelector('#postButton').addEventListener('click', async () => {
   const editor = document.querySelector('#postEditor');
