@@ -1,0 +1,70 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width,initial-scale=1" />
+  <title>Meeting Registration | Centennial Championship</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Barlow+Condensed:wght@700;800&family=Inter:wght@400;600;700&display=swap" rel="stylesheet" />
+  <link rel="stylesheet" href="style.css" />
+</head>
+<body>
+  <header class="hero small-hero">
+    <nav class="nav">
+      <a class="brand" href="index.html">CENTENNIAL <span>CHAMPIONSHIP</span></a>
+      <button class="admin-link" id="meetingLanguageButton" type="button">Español</button>
+    </nav>
+    <div class="hero-content">
+      <p class="eyebrow" data-en="Private meeting registration" data-es="Registro privado para la reunión">Private meeting registration</p>
+      <h1 data-en="REGISTER<br><em>AT THE MEETING.</em>" data-es="REGÍSTRATE<br><em>EN LA REUNIÓN.</em>">REGISTER<br><em>AT THE MEETING.</em></h1>
+      <p class="lead" data-en="Use this page only if you will pay the $5 fee at the organizers' meeting." data-es="Usa esta página solamente si pagarás la cuota de $5 en la reunión de los organizadores.">Use this page only if you will pay the $5 fee at the organizers' meeting.</p>
+    </div>
+  </header>
+
+  <main>
+    <section class="register">
+      <div>
+        <p class="eyebrow" data-en="No online payment" data-es="Sin pago en línea">No online payment</p>
+        <h2 data-en="MEETING<br>REGISTRATION" data-es="REGISTRO<br>PARA LA REUNIÓN">MEETING<br>REGISTRATION</h2>
+        <p data-en="Your registration will be saved without opening Cash App. Bring $5 to the meeting." data-es="Tu registro se guardará sin abrir Cash App. Lleva $5 a la reunión.">Your registration will be saved without opening Cash App. Bring $5 to the meeting.</p>
+        <div class="payment-note"><strong data-en="$5 due at the meeting" data-es="$5 a pagar en la reunión">$5 due at the meeting</strong><span data-en="Maximum 6 players per team." data-es="Máximo 6 jugadores por equipo.">Maximum 6 players per team.</span></div>
+      </div>
+
+      <form id="meetingRegistrationForm">
+        <label><span data-en="Full legal name" data-es="Nombre y apellido legal">Full legal name</span><input required name="playerName" minlength="5" maxlength="80" autocomplete="name" placeholder="First and last name" /></label>
+        <label><span data-en="Email address" data-es="Correo electrónico">Email address</span><input required type="email" name="email" maxlength="254" autocomplete="email" placeholder="name@example.com" /></label>
+        <label><span data-en="Age (14 or older)" data-es="Edad (14 años o más)">Age (14 or older)</span><input required type="number" name="age" min="14" max="100" /></label>
+        <label><span data-en="Select your national team" data-es="Selecciona tu selección nacional">Select your national team</span>
+          <select required name="team" id="meetingTeamSelect">
+            <option value="" disabled selected>Choose your team</option>
+            <option>Spain</option><option>France</option><option>England</option><option>Portugal</option><option>Belgium</option><option>Netherlands</option><option>Germany</option><option>Croatia</option><option>Italy</option><option>Brazil</option><option>Uruguay</option><option>Argentina</option><option>Mexico</option><option>U.S.A.</option><option>Japan</option><option>Morocco</option>
+          </select>
+        </label>
+        <p class="small" id="meetingTeamAvailability">Each team has 6 player spots.</p>
+        <label><span data-en="Playing position" data-es="Posición de juego">Playing position</span>
+          <select required name="position" id="meetingPositionSelect" disabled>
+            <option value="" disabled selected>Choose your team first</option>
+            <option>Goalkeeper</option><option>Defender</option><option>Midfielder</option><option>Striker</option>
+          </select>
+        </label>
+        <p class="small" id="meetingPositionAvailability">Choose a team to see available positions.</p>
+        <label class="check"><input required type="checkbox" /><span data-en="I will bring the $5 payment to the organizers' meeting." data-es="Llevaré el pago de $5 a la reunión de los organizadores.">I will bring the $5 payment to the organizers' meeting.</span></label>
+        <button class="button button-primary" type="submit"><span data-en="Register for meeting →" data-es="Registrarse para la reunión →">Register for meeting →</span></button>
+        <p class="message" id="meetingRegistrationMessage"></p>
+      </form>
+    </section>
+  </main>
+
+  <dialog id="meetingSuccessDialog">
+    <button class="close" type="button" id="closeMeetingSuccess" aria-label="Close">×</button>
+    <p class="eyebrow" data-en="Registration saved" data-es="Registro guardado">Registration saved</p>
+    <h2 data-en="YOU'RE REGISTERED" data-es="ESTÁS REGISTRADO">YOU'RE REGISTERED</h2>
+    <p data-en="Bring $5 to the organizers' meeting. No online payment is required." data-es="Lleva $5 a la reunión de los organizadores. No se requiere pago en línea.">Bring $5 to the organizers' meeting. No online payment is required.</p>
+  </dialog>
+
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+  <script src="supabase.js?v=6"></script>
+  <script src="meeting-registration.js?v=1"></script>
+</body>
+</html>
