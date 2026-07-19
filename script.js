@@ -37,6 +37,29 @@ function setSpanishText() {
   document.querySelectorAll('label').forEach(label => { const text = label.firstChild; if (!text || text.nodeType !== Node.TEXT_NODE) return; const labels = {'Full legal name':'Nombre y apellido legal','Age (14 or older)':'Edad (14 años o más)','Playing position':'Posición de juego','Select your national team':'Selecciona tu selección nacional','Select your team':'Selecciona tu equipo','Organizer email':'Correo electrónico del organizador','Rules (one rule per line)':'Reglas (una regla por línea)','Update title':'Título de actualización'}; const current = text.nodeValue.trim(); if (labels[current]) text.nodeValue = labels[current]; });
   const countryNames = {Spain:'España',England:'Inglaterra',Belgium:'Bélgica',Netherlands:'Países Bajos',Germany:'Alemania',Croatia:'Croacia',Italy:'Italia',Mexico:'México','U.S.A.':'Estados Unidos',Japan:'Japón',Morocco:'Marruecos'};
   document.querySelectorAll('#teamSelect option').forEach(option => { if (countryNames[option.textContent]) option.textContent = countryNames[option.textContent]; });
+  const fallbackStrings = {
+    'Registration': 'Registro', 'Posts': 'Publicaciones', 'Rules': 'Reglas',
+    'Organizer Desk': 'Panel de organizadores', 'Football tournament': 'Torneo de fútbol',
+    'Register to play, read posts, and check the tournament rules.': 'Regístrate para jugar, lee las publicaciones y consulta las reglas del torneo.',
+    'Register →': 'Registrarse →', 'Players age 14 and older': 'Jugadores de 14 años o más',
+    'Choose your national team and playing position, then pay $5 to register.': 'Elige tu selección nacional y posición de juego, luego paga $5 para registrarte.',
+    'Register now →': 'Regístrate ahora →', 'News from the organizers': 'Noticias de los organizadores',
+    'No posts yet.': 'Aún no hay publicaciones.', 'Read before playing': 'Lee antes de jugar',
+    'Rules will be posted by the organizers soon.': 'Los organizadores publicarán las reglas pronto.',
+    'Questions? Contact the tournament organizers.': '¿Preguntas? Contacta a los organizadores del torneo.',
+    'Player registration': 'Registro de jugadores',
+    'Registration is $5 per player. Players must be age 14 or older.': 'El registro cuesta $5 por jugador. Los jugadores deben tener 14 años o más.',
+    'Choose carefully': 'Elige con cuidado',
+    'Enter your real first and last name, choose your team and position, then pay the $5 entry fee with Cash App.': 'Escribe tu nombre y apellido reales, elige tu equipo y posición, y paga la cuota de $5 con Cash App.',
+    '$5 per player': '$5 por jugador', 'Your team choice locks after you select it.': 'Tu selección de equipo se bloquea después de elegirla.',
+    'Use your real first and last name. Nicknames are not accepted.': 'Usa tu nombre y apellido reales. No se aceptan apodos.',
+    'Your team selection is locked.': 'Tu selección de equipo está bloqueada.',
+    'I understand that my registration is not complete until I pay $5.': 'Entiendo que mi registro no está completo hasta que pague $5.'
+  };
+  document.querySelectorAll('nav a:not(.brand), p, h2, h3, footer span, .button').forEach(element => {
+    const translated = fallbackStrings[element.textContent.trim()];
+    if (translated) element.textContent = translated;
+  });
   document.title = document.title.replace('Centennial Championship', 'Campeonato Centenario');
 }
 document.querySelector('#languageButton')?.addEventListener('click', () => {
