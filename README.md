@@ -16,6 +16,9 @@ Replace these placeholders in `index.html`:
 3. Under **Build and deployment**, choose **Deploy from a branch**, then select `main` and `/ (root)`.
 4. Save. GitHub will give you the public website link in a few minutes.
 
-## Important about the admin button
+## Organizer access
 
-GitHub Pages is a static website. The included admin editor lets the first two email addresses in one browser use the editor, but it saves changes only in that browser. It is not a real protected login. To let two organizers publish shared rules and updates safely, connect the site to a service such as Supabase, Firebase, or a simple CMS.
+The Organizer Desk uses Supabase passwordless login. Only the organizer emails
+listed in `supabase.js` can open the dashboard. Run `admin-security-setup.sql`
+in the Supabase SQL Editor so database row-level security also restricts post,
+rule, and tournament-info changes to those accounts.
