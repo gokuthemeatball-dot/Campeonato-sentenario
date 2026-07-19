@@ -8,11 +8,11 @@
     <link rel="preconnect" href="https://fonts.googleapis.com" />
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
     <link href="https://fonts.googleapis.com/css2?family=Barlow+Condensed:wght@600;700;800&family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet" />
-    <link rel="stylesheet" href="style.css" />
+    <link rel="stylesheet" href="style.css" /><link rel="stylesheet" href="admin.css" />
   </head>
   <body>
     <header class="hero" id="home">
-      <nav class="nav"><a class="brand" href="#home">CAMPEONATO <span>CENTENARIO</span></a><a href="registration.html">Team registration</a><a href="#info">Tournament info</a><button class="admin-link" id="adminButton">Admin</button><button class="admin-link" id="languageButton">Español</button></nav>
+      <nav class="nav"><a class="brand" href="#home">CAMPEONATO <span>CENTENARIO</span></a><a href="registration.html">Team registration</a><a href="#info">Tournament info</a><button class="admin-link" id="languageButton">Español</button></nav>
       <div class="hero-content"><p class="eyebrow">Football tournament • Your city</p><h1>PLAY FOR<br /><em>THE CUP.</em></h1><p class="lead">Build your squad. Bring your game. Take home the title.</p><a class="button button-primary" href="registration.html">Register your team <span>→</span></a></div>
       <div class="ball" aria-hidden="true">⚽</div>
     </header>
@@ -27,13 +27,14 @@
       <section class="rules" id="rules"><p class="eyebrow">Know before you play</p><h2>TOURNAMENT RULES</h2><div id="rulesContent"><ol><li>Respect players, referees, and spectators.</li><li>All players must check in before their first game.</li><li>Teams are responsible for bringing matching jerseys.</li><li>Referee decisions are final.</li></ol></div></section>
 
       <section class="updates" id="updates"><p class="eyebrow">Stay in the game</p><h2>UPDATES</h2><div id="updatesContent"><article><p class="date">COMING SOON</p><h3>Schedule and brackets will be posted here.</h3></article></div></section>
+
+      <section class="community" id="community"><p class="eyebrow">From the organizers</p><h2>COMMUNITY POSTS</h2><div id="communityPosts"><p>No community posts yet.</p></div></section>
     </main>
 
     <footer><span>CAMPEONATO CENTENARIO</span><p>Questions? Contact [YOUR EMAIL OR INSTAGRAM]</p></footer>
 
     <dialog id="paymentDialog"><button class="close" data-close="paymentDialog" aria-label="Close">×</button><p class="eyebrow">One last step</p><h2>PAY YOUR ENTRY FEE</h2><p>Send <strong>$5 per player</strong> to <strong>$Gabriel3719</strong>. Put your team name in the payment note.</p><a class="button button-primary" id="cashAppLink" href="https://cash.app/$Gabriel3719" target="_blank" rel="noreferrer">Open Cash App <span>→</span></a></dialog>
 
-    <dialog id="adminDialog"><button class="close" data-close="adminDialog" aria-label="Close">×</button><p class="eyebrow">For organizers only</p><h2>ADMIN AREA</h2><p class="small">Are you an admin? Enter your email. Only the first two organizer emails can use this area.</p><label>Organizer email<input id="adminEmail" type="email" placeholder="you@email.com" /></label><button class="button button-primary" id="loginButton">Continue</button><p id="loginMessage" class="message"></p><div id="editor" hidden><h3>Registrations</h3><p><strong id="registrationCount">0</strong> players registered · <strong id="moneyTotal">$0</strong> total expected</p><div id="registrationList">No registrations yet.</div><label>Date and time<textarea id="whenEditor" rows="2" placeholder="Saturday, August 10&#10;10:00 AM"></textarea></label><label>Location<textarea id="whereEditor" rows="2" placeholder="Field / Park name&#10;City, State"></textarea></label><label>Rules (one rule per line)<textarea id="rulesEditor" rows="7"></textarea></label><label>Update title<textarea id="updateEditor" rows="3"></textarea></label><button class="button button-primary" id="saveButton">Save changes</button></div></dialog>
     <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
     <script src="supabase.js"></script>
     <script src="script.js"></script>

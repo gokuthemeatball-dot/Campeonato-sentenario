@@ -49,6 +49,13 @@ async function loadRemoteContent() {
   if (values.when && document.querySelector('#whenContent')) document.querySelector('#whenContent').innerHTML = escapeHtml(values.when).replace(/\n/g, '<br>');
   if (values.where && document.querySelector('#whereContent')) document.querySelector('#whereContent').innerHTML = escapeHtml(values.where).replace(/\n/g, '<br>');
 }
+async function loadCommunityPosts() {
+  const container = document.querySelector('#communityPosts');
+  if (!container) return;
+  const { data, error } = await tournamentDb.from('community_posts').select('message, created_at').order('created_at', { ascending: false });
+  if (error || !data) return;
+  container.innerHTML = data.length ? data.map(post => `<article><p class="date">COMMUNITY UPDATE</p><h3>${escapeHtml(post.message)}</h3></article>`).join('') : '<p>No community posts yet.</p>';
+}
 async function showRegistrations() {
   const { data: registrations, error } = await tournamentDb.from('registrations').select('player_name, player_age, team, paid, created_at').order('created_at', { ascending: false });
   if (error) return;
@@ -63,6 +70,7 @@ async function showRegistrations() {
 }
 displayContent();
 loadRemoteContent();
+loadCommunityPosts();
 
 document.querySelector('#registrationForm')?.addEventListener('submit', async (event) => {
   event.preventDefault();
