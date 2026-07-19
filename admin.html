@@ -7,7 +7,7 @@
     <link rel="preconnect" href="https://fonts.googleapis.com" />
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
     <link href="https://fonts.googleapis.com/css2?family=Barlow+Condensed:wght@600;700;800&family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet" />
-    <link rel="stylesheet" href="style.css" /><link rel="stylesheet" href="admin.css" />
+    <link rel="stylesheet" href="style.css" /><link rel="stylesheet" href="admin.css" /><link rel="stylesheet" href="admin-controls.css" />
   </head>
   <body class="admin-page">
     <header class="admin-header"><a class="brand" href="index.html">CAMPEONATO <span>CENTENARIO</span></a><button id="signOutButton" hidden>Sign out</button></header>
@@ -16,8 +16,8 @@
       <section id="dashboard" hidden><div class="dashboard-heading"><div><p class="eyebrow">Private organizer access</p><h1>ORGANIZER<br /><em>DESK</em></h1></div><p id="signedInAs"></p></div>
         <div class="admin-stats"><article><strong id="registrationCount">0</strong><span>Player registrations</span></article><article><strong id="moneyTotal">$0</strong><span>Expected money</span></article></div>
         <section class="admin-card"><h2>PLAYER REGISTRATIONS</h2><div id="registrationList">No registrations yet.</div></section>
-        <section class="admin-grid"><div class="admin-card"><h2>TOURNAMENT INFO</h2><label>Date and time<textarea id="whenEditor" rows="2"></textarea></label><label>Location<textarea id="whereEditor" rows="2"></textarea></label><label>Rules (one rule per line)<textarea id="rulesEditor" rows="7"></textarea></label><label>Update<textarea id="updateEditor" rows="3"></textarea></label><button class="button button-primary" id="saveButton">Save tournament info</button></div>
-        <div class="admin-card"><h2>COMMUNITY POST</h2><label>Post message<textarea id="postEditor" rows="7" placeholder="Share an announcement with everyone."></textarea></label><button class="button button-primary" id="postButton">Publish post</button><div id="adminPosts"></div></div></section>
+        <section class="admin-grid"><div class="admin-card"><h2>TOURNAMENT INFO</h2><label>Date and time<textarea id="whenEditor" rows="2"></textarea></label><label>Location<textarea id="whereEditor" rows="2"></textarea></label><label>Rules (one rule per line)<textarea id="rulesEditor" rows="7"></textarea></label><label>Update<textarea id="updateEditor" rows="3"></textarea></label><div class="admin-actions"><button class="button button-primary" id="saveButton">Save tournament info</button><button class="button button-danger" id="clearRulesButton" type="button">Remove all rules</button></div><p class="message" id="contentMessage" role="status"></p></div>
+        <div class="admin-card"><h2>COMMUNITY POSTS</h2><label>New post message<textarea id="postEditor" rows="5" placeholder="Share an announcement with everyone."></textarea></label><button class="button button-primary" id="postButton">Publish post</button><p class="message" id="postMessage" role="status"></p><div id="adminPosts"></div></div></section>
       </section>
     </main>
     <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script><script src="supabase.js"></script><script src="admin.js"></script>

@@ -1,0 +1,17 @@
+CAMPEONATO CENTENARIO — ADMIN UPDATE
+
+1. Upload these files to the root of the GitHub repository, replacing files
+   with the same names:
+   - admin.html
+   - admin.js
+   - admin-controls.css
+
+2. Open Supabase, choose this tournament project, and open SQL Editor.
+
+3. Paste and run the complete contents of admin-security-setup.sql once.
+
+4. Wait for GitHub Pages to redeploy, then open:
+   https://gokuthemeatball-dot.github.io/Campeonato-sentenario/admin.html
+
+Only the two organizer email accounts configured for the tournament can edit
+or delete posts, rules, and tournament information.

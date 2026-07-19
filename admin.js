@@ -6,6 +6,20 @@ const adminUrl = `${window.location.origin}${window.location.pathname}`;
 function safe(text) { const node = document.createElement('div'); node.textContent = text; return node.innerHTML; }
 function isOrganizer(email) { return organizerEmails.includes((email || '').toLowerCase()); }
 
+function renderPosts(posts) {
+  const container = document.querySelector('#adminPosts');
+  if (!posts?.length) { container.innerHTML = '<p>No community posts yet.</p>'; return; }
+  container.innerHTML = posts.map(post => `
+    <article class="admin-post" data-post-id="${post.id}">
+      <textarea class="post-edit" rows="4" aria-label="Edit post">${safe(post.message)}</textarea>
+      <p class="post-date">Published ${new Date(post.created_at).toLocaleString()}</p>
+      <div class="admin-actions">
+        <button class="button button-small" type="button" data-action="save-post">Save</button>
+        <button class="button button-small button-danger" type="button" data-action="delete-post">Delete</button>
+      </div>
+    </article>`).join('');
+}
+
 async function loadDashboard() {
   const { data: { session } } = await tournamentDb.auth.getSession();
   if (!session || !isOrganizer(session.user.email)) { loginView.hidden = false; dashboard.hidden = true; return; }
@@ -15,7 +29,7 @@ async function loadDashboard() {
   const [{ data: registrations }, { data: content }, { data: posts }] = await Promise.all([
     tournamentDb.from('registrations').select('player_name, player_age, position, team, created_at').order('created_at', { ascending: false }),
     tournamentDb.from('site_content').select('content_key, content_value'),
-    tournamentDb.from('community_posts').select('message, created_at').order('created_at', { ascending: false })
+    tournamentDb.from('community_posts').select('id, message, created_at').order('created_at', { ascending: false })
   ]);
   const values = Object.fromEntries((content || []).map(row => [row.content_key, row.content_value]));
   document.querySelector('#whenEditor').value = values.when || '';
@@ -25,7 +39,7 @@ async function loadDashboard() {
   document.querySelector('#registrationCount').textContent = (registrations || []).length;
   document.querySelector('#moneyTotal').textContent = `$${(registrations || []).length * 5}`;
   document.querySelector('#registrationList').innerHTML = registrations?.length ? registrations.map(player => `<p><strong>${safe(player.player_name)}</strong> · ${safe(player.team)} · ${safe(player.position || 'Position not set')} · age ${safe(player.player_age)}</p>`).join('') : 'No registrations yet.';
-  document.querySelector('#adminPosts').innerHTML = posts?.length ? posts.map(post => `<p class="post-item">${safe(post.message)}</p>`).join('') : '';
+  renderPosts(posts);
 }
 
 document.querySelector('#loginButton').addEventListener('click', async () => {
@@ -40,8 +54,17 @@ document.querySelector('#signOutButton').addEventListener('click', async () => {
 document.querySelector('#saveButton').addEventListener('click', async () => {
   const updates = [['when', '#whenEditor'], ['where', '#whereEditor'], ['rules', '#rulesEditor'], ['update', '#updateEditor']];
   const results = await Promise.all(updates.map(([key, selector]) => tournamentDb.from('site_content').update({ content_value: document.querySelector(selector).value }).eq('content_key', key)));
-  if (results.some(result => result.error)) { alert('Could not save. Please try again.'); return; }
-  alert('Tournament information saved.');
+  const message = document.querySelector('#contentMessage');
+  if (results.some(result => result.error)) { message.textContent = 'Could not save. Please try again.'; return; }
+  message.textContent = 'Tournament information saved.';
+});
+document.querySelector('#clearRulesButton').addEventListener('click', async () => {
+  if (!window.confirm('Remove all tournament rules?')) return;
+  const { error } = await tournamentDb.from('site_content').update({ content_value: '' }).eq('content_key', 'rules');
+  const message = document.querySelector('#contentMessage');
+  if (error) { message.textContent = 'Could not remove the rules.'; return; }
+  document.querySelector('#rulesEditor').value = '';
+  message.textContent = 'All tournament rules were removed.';
 });
 document.querySelector('#postButton').addEventListener('click', async () => {
   const editor = document.querySelector('#postEditor');
@@ -55,8 +78,28 @@ document.querySelector('#postButton').addEventListener('click', async () => {
       .from('site_content')
       .update({ content_value: message })
       .eq('content_key', 'update');
-    if (backupError) { alert(`Could not publish post: ${backupError.message}`); return; }
+    if (backupError) { document.querySelector('#postMessage').textContent = `Could not publish post: ${backupError.message}`; return; }
   }
-  editor.value = ''; loadDashboard();
+  editor.value = ''; document.querySelector('#postMessage').textContent = 'Post published.'; loadDashboard();
+});
+document.querySelector('#adminPosts').addEventListener('click', async (event) => {
+  const button = event.target.closest('button[data-action]');
+  if (!button) return;
+  const post = button.closest('[data-post-id]');
+  const id = Number(post.dataset.postId);
+  const message = document.querySelector('#postMessage');
+  if (button.dataset.action === 'save-post') {
+    const newMessage = post.querySelector('.post-edit').value.trim();
+    if (!newMessage) { message.textContent = 'A post cannot be empty. Delete it instead.'; return; }
+    const { error } = await tournamentDb.from('community_posts').update({ message: newMessage }).eq('id', id);
+    message.textContent = error ? 'Could not update the post.' : 'Post updated.';
+    if (!error) loadDashboard();
+  }
+  if (button.dataset.action === 'delete-post') {
+    if (!window.confirm('Permanently delete this post?')) return;
+    const { error } = await tournamentDb.from('community_posts').delete().eq('id', id);
+    message.textContent = error ? 'Could not delete the post.' : 'Post deleted.';
+    if (!error) loadDashboard();
+  }
 });
 loadDashboard();
