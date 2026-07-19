@@ -84,6 +84,23 @@ async function showMeetingAnnouncements() {
   section.scrollIntoView({ behavior: 'smooth', block: 'start' });
 }
 
+async function checkMeetingRegistrationStatus() {
+  const email = localStorage.getItem('meetingRegistrationEmail');
+  if (!email) return;
+  const { data, error } = await tournamentDb.rpc('meeting_registration_status', { check_email: email });
+  if (error) return;
+  if (data === 'accepted') {
+    localStorage.removeItem('meetingRegistrationEmail');
+    window.location.href = 'index.html';
+  }
+  if (data === null && localStorage.getItem('meetingRegistrationComplete') === 'true') {
+    localStorage.removeItem('meetingRegistrationComplete');
+    localStorage.removeItem('meetingRegistrationEmail');
+    document.querySelector('#meetingAnnouncements').hidden = true;
+    meetingMessage.textContent = meetingText('Your registration request was revoked because payment was not received.', 'Tu solicitud de registro fue revocada porque no se recibió el pago.');
+  }
+}
+
 document.querySelector('#meetingLanguageButton').addEventListener('click', () => {
   meetingSpanish = !meetingSpanish;
   localStorage.setItem('tournamentLanguage', meetingSpanish ? 'es' : 'en');
@@ -107,7 +124,9 @@ document.querySelector('#meetingRegistrationForm').addEventListener('submit', as
     player_age: Number(form.get('age')),
     team: form.get('team'),
     position: form.get('position'),
-    paid: false
+    paid: false,
+    registration_source: 'meeting',
+    registration_status: 'pending'
   });
   if (error) {
     const problem = error.message || '';
@@ -122,6 +141,7 @@ document.querySelector('#meetingRegistrationForm').addEventListener('submit', as
   }
   meetingMessage.textContent = '';
   localStorage.setItem('meetingRegistrationComplete', 'true');
+  localStorage.setItem('meetingRegistrationEmail', String(form.get('email') || '').trim().toLowerCase());
   document.querySelector('#meetingSuccessDialog').showModal();
   await showMeetingAnnouncements();
   event.currentTarget.reset();
@@ -133,3 +153,5 @@ document.querySelector('#closeMeetingSuccess').addEventListener('click', () => d
 applyMeetingLanguage();
 loadMeetingTeams();
 if (localStorage.getItem('meetingRegistrationComplete') === 'true') showMeetingAnnouncements();
+checkMeetingRegistrationStatus();
+setInterval(checkMeetingRegistrationStatus, 5000);
