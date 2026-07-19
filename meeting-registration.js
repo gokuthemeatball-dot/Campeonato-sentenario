@@ -4,6 +4,11 @@ const meetingPositionSelect = document.querySelector('#meetingPositionSelect');
 const meetingMessage = document.querySelector('#meetingRegistrationMessage');
 
 function meetingText(en, es) { return meetingSpanish ? es : en; }
+function escapeMeetingText(value) {
+  const node = document.createElement('div');
+  node.textContent = value;
+  return node.innerHTML;
+}
 function validMeetingName(name) {
   const normalized = name.trim().replace(/\s+/g, ' ');
   const parts = normalized.split(' ');
@@ -60,12 +65,32 @@ async function loadMeetingPositions(team) {
   document.querySelector('#meetingPositionAvailability').textContent = meetingText('Per team: 1 goalkeeper, 2 defenders, 2 midfielders, and 1 striker.', 'Por equipo: 1 portero, 2 defensas, 2 mediocampistas y 1 delantero.');
 }
 
+async function showMeetingAnnouncements() {
+  const section = document.querySelector('#meetingAnnouncements');
+  const list = document.querySelector('#meetingAnnouncementList');
+  if (!section || !list) return;
+  section.hidden = false;
+  const [{ data: posts }, { data: content }] = await Promise.all([
+    tournamentDb.from('community_posts').select('message, created_at').order('created_at', { ascending: false }),
+    tournamentDb.from('site_content').select('content_key, content_value').eq('content_key', 'update')
+  ]);
+  const items = [];
+  const organizerUpdate = content?.[0]?.content_value?.trim();
+  if (organizerUpdate) items.push(organizerUpdate);
+  (posts || []).forEach(post => items.push(post.message));
+  list.innerHTML = items.length
+    ? items.map(message => `<article><p class="date">${meetingText('ORGANIZER ANNOUNCEMENT', 'ANUNCIO DEL ORGANIZADOR')}</p><h3>${escapeMeetingText(message)}</h3></article>`).join('')
+    : `<p>${meetingText('No announcements yet.', 'Aún no hay anuncios.')}</p>`;
+  section.scrollIntoView({ behavior: 'smooth', block: 'start' });
+}
+
 document.querySelector('#meetingLanguageButton').addEventListener('click', () => {
   meetingSpanish = !meetingSpanish;
   localStorage.setItem('tournamentLanguage', meetingSpanish ? 'es' : 'en');
   applyMeetingLanguage();
   loadMeetingTeams();
   if (meetingTeamSelect.value) loadMeetingPositions(meetingTeamSelect.value);
+  if (localStorage.getItem('meetingRegistrationComplete') === 'true') showMeetingAnnouncements();
 });
 meetingTeamSelect.addEventListener('change', event => loadMeetingPositions(event.target.value));
 document.querySelector('#meetingRegistrationForm').addEventListener('submit', async event => {
@@ -96,7 +121,9 @@ document.querySelector('#meetingRegistrationForm').addEventListener('submit', as
     return;
   }
   meetingMessage.textContent = '';
+  localStorage.setItem('meetingRegistrationComplete', 'true');
   document.querySelector('#meetingSuccessDialog').showModal();
+  await showMeetingAnnouncements();
   event.currentTarget.reset();
   meetingPositionSelect.disabled = true;
   await loadMeetingTeams();
@@ -105,3 +132,4 @@ document.querySelector('#closeMeetingSuccess').addEventListener('click', () => d
 
 applyMeetingLanguage();
 loadMeetingTeams();
+if (localStorage.getItem('meetingRegistrationComplete') === 'true') showMeetingAnnouncements();
