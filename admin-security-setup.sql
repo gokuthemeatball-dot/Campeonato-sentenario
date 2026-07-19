@@ -152,6 +152,24 @@ begin
   if (select count(*) from public.registrations where lower(team) = lower(new.team)) >= 6 then
     raise exception 'TEAM_FULL' using errcode = 'P0001';
   end if;
+
+  if lower(new.position) not in ('goalkeeper', 'defender', 'midfielder', 'striker') then
+    raise exception 'INVALID_POSITION' using errcode = 'P0001';
+  end if;
+
+  if (
+    select count(*)
+    from public.registrations
+    where lower(team) = lower(new.team)
+      and lower(position) = lower(new.position)
+  ) >= case lower(new.position)
+    when 'goalkeeper' then 1
+    when 'defender' then 2
+    when 'midfielder' then 2
+    when 'striker' then 1
+  end then
+    raise exception 'POSITION_FULL' using errcode = 'P0001';
+  end if;
   return new;
 end;
 $$;
@@ -175,3 +193,18 @@ $$;
 
 revoke all on function public.team_availability() from public;
 grant execute on function public.team_availability() to anon, authenticated;
+
+create or replace function public.position_availability()
+returns table(team text, position text, player_count bigint)
+language sql
+security definer
+set search_path = public
+as $$
+  select registrations.team, registrations.position, count(*)::bigint
+  from public.registrations
+  where registrations.position is not null
+  group by registrations.team, registrations.position;
+$$;
+
+revoke all on function public.position_availability() from public;
+grant execute on function public.position_availability() to anon, authenticated;

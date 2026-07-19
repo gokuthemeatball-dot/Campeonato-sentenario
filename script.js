@@ -10,6 +10,13 @@ let isSpanish = localStorage.getItem('tournamentLanguage') === 'es';
 const playerEmailField = document.querySelector('#registrationForm input[name="email"]');
 playerEmailField?.closest('label').remove();
 document.querySelector('#registrationForm input[name="age"]')?.setAttribute('min', '14');
+const positionSelect = document.querySelector('#registrationForm select[name="position"]');
+if (positionSelect) {
+  positionSelect.id = 'positionSelect';
+  positionSelect.disabled = true;
+  positionSelect.insertAdjacentHTML('afterend', '<input type="hidden" id="lockedPosition" name="lockedPosition" />');
+  positionSelect.closest('label').insertAdjacentHTML('afterend', '<p class="small" id="positionAvailability">Choose a team to see available positions.</p><p class="small" id="positionLockMessage" hidden>Your position selection is locked. Reload this page to choose a different position before registering.</p>');
+}
 
 function setSpanishText() {
   const strings = {
@@ -117,6 +124,32 @@ async function loadTeamAvailability() {
     option.textContent = `${option.dataset.originalLabel} — ${count >= 6 ? (isSpanish ? 'LLENO' : 'FULL') : `${6 - count} ${isSpanish ? 'lugares disponibles' : 'spots left'}`}`;
   });
 }
+async function loadPositionAvailability(team) {
+  const select = document.querySelector('#positionSelect');
+  const message = document.querySelector('#positionAvailability');
+  if (!select || !team) return;
+  const limits = { Goalkeeper: 1, Defender: 2, Midfielder: 2, Striker: 1 };
+  const { data, error } = await tournamentDb.rpc('position_availability');
+  if (error || !data) {
+    if (message) message.textContent = isSpanish ? 'No se pudieron cargar las posiciones.' : 'Positions could not be loaded.';
+    return;
+  }
+  const counts = Object.fromEntries(data
+    .filter(row => row.team.toLowerCase() === team.toLowerCase())
+    .map(row => [row.position, Number(row.player_count)]));
+  [...select.options].forEach(option => {
+    if (!option.value) return;
+    const count = counts[option.value] || 0;
+    const limit = limits[option.value];
+    option.dataset.originalLabel ||= option.textContent;
+    option.disabled = count >= limit;
+    option.textContent = `${option.dataset.originalLabel} — ${count >= limit ? (isSpanish ? 'OCUPADO' : 'TAKEN') : `${limit - count} ${isSpanish ? 'disponible(s)' : 'available'}`}`;
+  });
+  select.disabled = false;
+  if (message) message.textContent = isSpanish
+    ? 'Por equipo: 1 portero, 2 defensas, 2 mediocampistas y 1 delantero.'
+    : 'Per team: 1 goalkeeper, 2 defenders, 2 midfielders, and 1 striker.';
+}
 async function loadRemoteContent() {
   const { data, error } = await tournamentDb.from('site_content').select('content_key, content_value');
   if (error || !data) return;
@@ -181,8 +214,12 @@ document.querySelector('#registrationForm')?.addEventListener('submit', async (e
       : 'Enter your real first and last name. Nicknames, fake names, and inappropriate words are not allowed.');
     return;
   }
+  if (!form.get('lockedPosition')) {
+    alert(isSpanish ? 'Elige una posición disponible.' : 'Choose an available position.');
+    return;
+  }
   const { error } = await tournamentDb.from('registrations').insert({
-    player_name: playerName, player_age: Number(form.get('age')), position: form.get('position'), team: form.get('lockedTeam')
+    player_name: playerName, player_age: Number(form.get('age')), position: form.get('lockedPosition'), team: form.get('lockedTeam')
   });
   if (error) {
     const errorMessage = error.message || '';
@@ -190,6 +227,10 @@ document.querySelector('#registrationForm')?.addEventListener('submit', async (e
       alert(isSpanish
         ? 'Ese equipo ya tiene 6 jugadores. Recarga la página y elige otro equipo.'
         : 'That team already has 6 players. Please reload and choose another team.');
+    } else if (errorMessage.includes('POSITION_FULL')) {
+      alert(isSpanish
+        ? 'Esa posición ya está ocupada en este equipo. Recarga la página y elige otra posición.'
+        : 'That position is already taken for this team. Reload and choose another position.');
     } else if (errorMessage.includes('INVALID_REAL_NAME')) {
       alert(isSpanish
         ? 'Usa tu nombre y apellido reales. No se permiten apodos, nombres falsos ni palabras inapropiadas.'
@@ -204,14 +245,20 @@ document.querySelector('#registrationForm')?.addEventListener('submit', async (e
   }
   paymentDialog.showModal();
 });
-document.querySelector('#teamSelect')?.addEventListener('change', (event) => {
+document.querySelector('#teamSelect')?.addEventListener('change', async (event) => {
   const newTeamField = document.querySelector('#newTeamField');
   const newTeamInput = newTeamField?.querySelector('input');
   if (newTeamField) newTeamField.hidden = event.target.value !== 'new';
   if (newTeamInput) newTeamInput.required = event.target.value === 'new';
   document.querySelector('#lockedTeam').value = event.target.value;
+  await loadPositionAvailability(event.target.value);
   event.target.disabled = true;
   document.querySelector('#teamLockMessage').hidden = false;
+});
+document.querySelector('#positionSelect')?.addEventListener('change', (event) => {
+  document.querySelector('#lockedPosition').value = event.target.value;
+  event.target.disabled = true;
+  document.querySelector('#positionLockMessage').hidden = false;
 });
 document.querySelector('#questionForm')?.addEventListener('submit', async (event) => {
   event.preventDefault();
