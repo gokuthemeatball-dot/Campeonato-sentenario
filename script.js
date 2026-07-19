@@ -10,16 +10,21 @@ let isSpanish = localStorage.getItem('tournamentLanguage') === 'es';
 const playerEmailField = document.querySelector('#registrationForm input[name="email"]');
 playerEmailField?.closest('label').remove();
 document.querySelector('#registrationForm input[name="age"]')?.setAttribute('min', '14');
+const teamNote = document.querySelector('.payment-note span');
+if (teamNote) teamNote.textContent = isSpanish
+  ? 'Máximo 6 jugadores por equipo. El equipo solo se cierra después de 6 registros exitosos.'
+  : 'Maximum 6 players per team. Teams only close after 6 successful registrations.';
+document.querySelector('#teamLockMessage')?.remove();
 const positionSelect = document.querySelector('#registrationForm select[name="position"]');
 if (positionSelect) {
   positionSelect.id = 'positionSelect';
   positionSelect.disabled = true;
   positionSelect.insertAdjacentHTML('afterend', '<input type="hidden" id="lockedPosition" name="lockedPosition" />');
-  positionSelect.closest('label').insertAdjacentHTML('afterend', '<p class="small" id="positionAvailability">Choose a team to see available positions.</p><p class="small" id="positionLockMessage" hidden>Your position selection is locked. Reload this page to choose a different position before registering.</p>');
-  const teamLockMessage = document.querySelector('#teamLockMessage');
+  positionSelect.closest('label').insertAdjacentHTML('afterend', '<p class="small" id="positionAvailability">Choose a team to see available positions.</p>');
+  const teamLockMessage = document.querySelector('#teamAvailability');
   const positionLabel = positionSelect.closest('label');
   if (teamLockMessage && positionLabel) {
-    teamLockMessage.after(positionLabel, document.querySelector('#positionAvailability'), document.querySelector('#positionLockMessage'));
+    teamLockMessage.after(positionLabel, document.querySelector('#positionAvailability'));
   }
 }
 
@@ -264,11 +269,9 @@ document.querySelector('#teamSelect')?.addEventListener('change', async (event) 
   }
   document.querySelector('#lockedPosition').value = '';
   await loadPositionAvailability(event.target.value);
-  document.querySelector('#teamLockMessage').hidden = true;
 });
 document.querySelector('#positionSelect')?.addEventListener('change', (event) => {
   document.querySelector('#lockedPosition').value = event.target.value;
-  document.querySelector('#positionLockMessage').hidden = true;
 });
 document.querySelector('#questionForm')?.addEventListener('submit', async (event) => {
   event.preventDefault();
