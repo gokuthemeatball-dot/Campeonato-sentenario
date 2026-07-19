@@ -5,6 +5,9 @@ CAMPEONATO CENTENARIO — ADMIN UPDATE
    - admin.html
    - admin.js
    - admin-controls.css
+   - index.html
+   - script.js
+   - supabase.js
 
 2. Open Supabase, choose this tournament project, and open SQL Editor.
 
@@ -13,5 +16,10 @@ CAMPEONATO CENTENARIO — ADMIN UPDATE
 4. Wait for GitHub Pages to redeploy, then open:
    https://gokuthemeatball-dot.github.io/Campeonato-sentenario/admin.html
 
-Only the two organizer email accounts configured for the tournament can edit
-or delete posts, rules, and tournament information.
+The public tournament link works normally for everyone. The Organizer Desk
+button appears only when one of the two approved admins is signed in. To sign
+in for the first time, an admin opens the private /admin.html address directly.
+Other visitors cannot enter the dashboard even if they know that address.
+After an approved admin signs in once, the session stays remembered on that
+browser/device and refreshes automatically. Signing out, clearing browser data,
+or using a different device will require signing in again.

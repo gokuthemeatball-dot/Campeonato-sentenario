@@ -82,9 +82,10 @@ async function showOrganizerLink() {
   const link = document.querySelector('#organizerLink');
   if (!link) return;
   const { data: { session } } = await tournamentDb.auth.getSession();
-  link.hidden = !session || !organizerEmails.includes(session.user.email.toLowerCase());
+  link.hidden = !session || !organizerEmails.includes((session.user.email || '').toLowerCase());
 }
 showOrganizerLink();
+tournamentDb.auth.onAuthStateChange(() => showOrganizerLink());
 
 document.querySelector('#registrationForm')?.addEventListener('submit', async (event) => {
   event.preventDefault();

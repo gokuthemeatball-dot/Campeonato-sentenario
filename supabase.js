@@ -2,6 +2,14 @@
 // supabase-setup.sql keep private registrations visible only to organizers.
 window.tournamentDb = window.supabase.createClient(
   'https://sxcgjmztdnoedxnjsxlw.supabase.co',
-  'sb_publishable_zU17NbXF_dWXp8ZaDklc0Q_TR6_gy5r'
+  'sb_publishable_zU17NbXF_dWXp8ZaDklc0Q_TR6_gy5r',
+  {
+    auth: {
+      persistSession: true,
+      autoRefreshToken: true,
+      detectSessionInUrl: true,
+      storage: window.localStorage
+    }
+  }
 );
 window.organizerEmails = ['gokuthemeatball@gmail.com', 'adrieljimenez067@gmail.com'];
