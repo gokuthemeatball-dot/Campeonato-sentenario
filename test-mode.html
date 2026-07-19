@@ -1,0 +1,37 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width,initial-scale=1" />
+  <title>Test Mode | Centennial Championship</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Barlow+Condensed:wght@700;800&family=Inter:wght@400;600;700&display=swap" rel="stylesheet" />
+  <link rel="stylesheet" href="style.css" />
+</head>
+<body>
+  <header class="hero small-hero"><nav class="nav"><span class="brand">CENTENNIAL <span>CHAMPIONSHIP</span></span></nav><div class="hero-content"><p class="eyebrow">Unofficial testing area</p><h1>TEST<br><em>MODE.</em></h1><p class="lead">Nothing submitted here becomes an official registration or affects the public tournament.</p></div></header>
+  <main>
+    <section class="register" id="testLoginView">
+      <div><p class="eyebrow">Tester login</p><h2>ENTER<br>ACCESS CODE</h2><p>Ask an organizer for the current Test Mode code.</p></div>
+      <form id="testLoginForm"><label>Tester access code<input id="testerCode" required type="password" autocomplete="off" /></label><button class="button button-primary" type="submit">Enter Test Mode <span>→</span></button><p class="message" id="testLoginMessage"></p></form>
+    </section>
+    <section class="register" id="testFormView" hidden>
+      <div><p class="eyebrow">Unofficial registration test</p><h2>TEST<br>REGISTRATION</h2><p>This tests name filtering, email, team limits, position limits, and a simulated payment. It never changes the official player list.</p></div>
+      <form id="testRegistrationForm">
+        <label>Full legal name<input required name="playerName" minlength="5" maxlength="80" /></label>
+        <label>Email address<input required type="email" name="email" maxlength="254" /></label>
+        <label>Age (14 or older)<input required type="number" name="age" min="14" max="100" /></label>
+        <label>Team<select required name="team" id="testTeamSelect"><option value="" disabled selected>Choose your team</option><option>Spain</option><option>France</option><option>England</option><option>Portugal</option><option>Belgium</option><option>Netherlands</option><option>Germany</option><option>Croatia</option><option>Italy</option><option>Brazil</option><option>Uruguay</option><option>Argentina</option><option>Mexico</option><option>U.S.A.</option><option>Japan</option><option>Morocco</option></select></label>
+        <label>Position<select required name="position" id="testPositionSelect" disabled><option value="" disabled selected>Choose your team first</option><option>Goalkeeper</option><option>Defender</option><option>Midfielder</option><option>Striker</option></select></label>
+        <p class="small" id="testAvailabilityMessage"></p>
+        <button class="button button-primary" type="submit">Submit unofficial test <span>→</span></button><p class="message" id="testSubmitMessage"></p>
+      </form>
+    </section>
+  </main>
+  <dialog id="testPaymentDialog"><button class="close" id="closeTestPayment" type="button">×</button><p class="eyebrow">Simulation only</p><h2>TEST PAYMENT</h2><p>No money will be charged. Press the button to simulate a successful $5 payment.</p><button class="button button-primary" id="simulatePaymentButton" type="button">Simulate successful payment <span>→</span></button><p class="message" id="testPaymentMessage"></p></dialog>
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+  <script src="supabase.js?v=6"></script>
+  <script src="test-mode.js?v=2"></script>
+</body>
+</html>

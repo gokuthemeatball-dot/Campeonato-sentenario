@@ -6,6 +6,7 @@ const storedRules = localStorage.getItem('kickoffRules');
 const storedUpdate = localStorage.getItem('kickoffUpdate');
 const pageEnglish = document.body.innerHTML;
 let isSpanish = localStorage.getItem('tournamentLanguage') === 'es';
+let currentPublicTestRegistrationId = null;
 
 const playerEmailField = document.querySelector('#registrationForm input[name="email"]');
 playerEmailField?.closest('label').remove();
@@ -123,15 +124,20 @@ function validRealName(name) {
 async function loadTeamAvailability() {
   const select = document.querySelector('#teamSelect');
   if (!select) return;
-  const { data, error } = await tournamentDb.rpc('team_availability');
+  const testMode = window.tournamentTestModeActive && window.tournamentTesterCode;
+  const { data, error } = testMode
+    ? await tournamentDb.rpc('test_registration_availability', { check_code: window.tournamentTesterCode })
+    : await tournamentDb.rpc('team_availability');
   if (error || !data) return;
-  const counts = Object.fromEntries(data.map(row => [row.team, Number(row.player_count)]));
+  const counts = testMode
+    ? data.reduce((totals, row) => ({ ...totals, [row.team]: (totals[row.team] || 0) + Number(row.player_count) }), {})
+    : Object.fromEntries(data.map(row => [row.team, Number(row.player_count)]));
   [...select.options].forEach(option => {
     if (!option.value) return;
     const count = counts[option.value] || 0;
     option.dataset.originalLabel ||= option.textContent;
     option.disabled = count >= 6;
-    option.textContent = `${option.dataset.originalLabel} — ${count >= 6 ? (isSpanish ? 'LLENO' : 'FULL') : `${6 - count} ${isSpanish ? 'lugares disponibles' : 'spots left'}`}`;
+    option.textContent = `${option.dataset.originalLabel} — ${count >= 6 ? (isSpanish ? 'LLENO' : 'FULL') : `${6 - count} ${testMode ? (isSpanish ? 'lugares de prueba' : 'test spots left') : (isSpanish ? 'lugares disponibles' : 'spots left')}`}`;
   });
 }
 async function loadPositionAvailability(team) {
@@ -139,7 +145,10 @@ async function loadPositionAvailability(team) {
   const message = document.querySelector('#positionAvailability');
   if (!select || !team) return;
   const limits = { Goalkeeper: 1, Defender: 2, Midfielder: 2, Striker: 1 };
-  const { data, error } = await tournamentDb.rpc('position_availability');
+  const testMode = window.tournamentTestModeActive && window.tournamentTesterCode;
+  const { data, error } = testMode
+    ? await tournamentDb.rpc('test_registration_availability', { check_code: window.tournamentTesterCode })
+    : await tournamentDb.rpc('position_availability');
   if (error || !data) {
     select.disabled = false;
     if (message) message.textContent = isSpanish ? 'Elige una posición. La disponibilidad se verificará al registrarte.' : 'Choose a position. Availability will be checked when you register.';
@@ -229,9 +238,20 @@ document.querySelector('#registrationForm')?.addEventListener('submit', async (e
     alert(isSpanish ? 'Elige una posición disponible.' : 'Choose an available position.');
     return;
   }
-  const { error } = await tournamentDb.from('registrations').insert({
-    player_name: playerName, player_age: Number(form.get('age')), position: form.get('lockedPosition'), team: form.get('lockedTeam')
-  });
+  const testMode = window.tournamentTestModeActive && window.tournamentTesterCode;
+  const result = testMode
+    ? await tournamentDb.rpc('submit_test_registration', {
+      check_code: window.tournamentTesterCode,
+      test_name: playerName,
+      test_email: `tester-${Date.now()}@example.test`,
+      test_age: Number(form.get('age')),
+      test_team: form.get('lockedTeam'),
+      test_position: form.get('lockedPosition')
+    })
+    : await tournamentDb.from('registrations').insert({
+      player_name: playerName, player_age: Number(form.get('age')), position: form.get('lockedPosition'), team: form.get('lockedTeam')
+    });
+  const { error } = result;
   if (error) {
     const errorMessage = error.message || '';
     if (errorMessage.includes('TEAM_FULL')) {
@@ -254,7 +274,21 @@ document.querySelector('#registrationForm')?.addEventListener('submit', async (e
     await loadTeamAvailability();
     return;
   }
+  if (testMode) {
+    currentPublicTestRegistrationId = result.data;
+    paymentDialog.querySelector('h2').textContent = isSpanish ? 'PAGO DE PRUEBA' : 'TEST PAYMENT';
+    paymentDialog.querySelector('p').textContent = isSpanish ? 'Simula un pago de $5. No se cobrará dinero real.' : 'Simulate a $5 payment. No real money will be charged.';
+    const paymentLink = paymentDialog.querySelector('a');
+    paymentLink.textContent = isSpanish ? 'Simular pago exitoso →' : 'Simulate successful payment →';
+    paymentLink.removeAttribute('target');
+  }
   paymentDialog.showModal();
+});
+paymentDialog?.querySelector('a')?.addEventListener('click', async event => {
+  if (!window.tournamentTestModeActive || !currentPublicTestRegistrationId) return;
+  event.preventDefault();
+  const { error } = await tournamentDb.rpc('simulate_test_payment', { check_code: window.tournamentTesterCode, registration_id: currentPublicTestRegistrationId });
+  window.alert(error ? 'Test payment simulation failed.' : 'Test payment succeeded. No real money was charged.');
 });
 document.querySelector('#teamSelect')?.addEventListener('change', async (event) => {
   const newTeamField = document.querySelector('#newTeamField');
@@ -281,10 +315,19 @@ document.querySelector('#questionForm')?.addEventListener('submit', async (event
   const status = document.querySelector('#questionMessage');
   if (!validRealName(senderName)) { status.textContent = isSpanish ? 'Usa tu nombre y apellido reales, sin apodos ni palabras inapropiadas.' : 'Use your real first and last name, without nicknames or inappropriate words.'; return; }
   if (question.length < 5) { status.textContent = isSpanish ? 'Escribe una pregunta completa.' : 'Please enter a complete question.'; return; }
+  if (window.tournamentTestModeActive && window.tournamentTesterCode) {
+    event.currentTarget.reset();
+    status.textContent = isSpanish ? 'Pregunta de prueba simulada. No se publicó.' : 'Test question simulated. Nothing was published.';
+    return;
+  }
   const { error } = await tournamentDb.from('player_questions').insert({ sender_name: senderName, question });
   if (error) { status.textContent = isSpanish ? 'No se pudo enviar tu pregunta. Inténtalo de nuevo.' : 'Your question could not be sent. Please try again.'; return; }
   event.currentTarget.reset();
   status.textContent = isSpanish ? 'Tu pregunta fue enviada a los organizadores.' : 'Your question was sent to the organizers.';
+});
+window.addEventListener('tournament-test-ready', () => {
+  loadTeamAvailability();
+  if (document.querySelector('#teamSelect')?.value) loadPositionAvailability(document.querySelector('#teamSelect').value);
 });
 document.querySelector('#adminButton')?.addEventListener('click', () => adminDialog.showModal());
 document.querySelectorAll('[data-close]').forEach(button => button.addEventListener('click', () => document.querySelector(`#${button.dataset.close}`).close()));

@@ -51,6 +51,12 @@ function renderPendingRegistrations(registrations) {
     </article>`).join('');
 }
 
+function renderTestRegistrations(registrations) {
+  const container = document.querySelector('#testRegistrationList');
+  if (!registrations?.length) { container.innerHTML = '<p>No test registrations.</p>'; return; }
+  container.innerHTML = registrations.map(item => `<p><strong>${safe(item.player_name)}</strong> · ${safe(item.email)} · ${safe(item.team)} · ${safe(item.position)} · age ${safe(item.player_age)} · ${item.simulated_payment ? 'simulated payment passed' : 'payment simulation pending'}</p>`).join('');
+}
+
 async function loadDashboard() {
   const { data: { session } } = await tournamentDb.auth.getSession();
   if (!session || !isOrganizer(session.user.email)) {
@@ -65,11 +71,14 @@ async function loadDashboard() {
   document.querySelector('#organizerTeam').innerHTML = organizerEmails
     .map(email => `<span class="organizer-chip">${safe(email)}</span>`)
     .join('');
-  const [{ data: registrations }, { data: content }, { data: posts }, { data: questions }] = await Promise.all([
+  const [{ data: registrations }, { data: content }, { data: posts }, { data: questions }, { data: testSettings }, { data: testRegistrations }, { data: testerSessions }] = await Promise.all([
     tournamentDb.from('registrations').select('id, player_name, email, player_age, position, team, paid, registration_source, registration_status, created_at').order('created_at', { ascending: false }),
     tournamentDb.from('site_content').select('content_key, content_value'),
     tournamentDb.from('community_posts').select('id, message, created_at').order('created_at', { ascending: false }),
-    tournamentDb.from('player_questions').select('id, sender_name, question, organizer_reply, replied_at, created_at').order('created_at', { ascending: false })
+    tournamentDb.from('player_questions').select('id, sender_name, question, organizer_reply, replied_at, created_at').order('created_at', { ascending: false }),
+    tournamentDb.from('test_settings').select('enabled, access_code').eq('id', true).maybeSingle(),
+    tournamentDb.from('test_registrations').select('player_name, email, player_age, team, position, simulated_payment, created_at').order('created_at', { ascending: false }),
+    tournamentDb.from('test_access_sessions').select('tester_token')
   ]);
   const values = Object.fromEntries((content || []).map(row => [row.content_key, row.content_value]));
   document.querySelector('#whenEditor').value = values.when || '';
@@ -80,6 +89,13 @@ async function loadDashboard() {
   document.querySelector('#moneyTotal').textContent = `$${(registrations || []).length * 5}`;
   document.querySelector('#registrationList').innerHTML = registrations?.length ? registrations.map(player => `<p><strong>${safe(player.player_name)}</strong> · ${safe(player.team)} · ${safe(player.position || 'Position not set')} · age ${safe(player.player_age)}</p>`).join('') : 'No registrations yet.';
   renderPendingRegistrations(registrations);
+  document.querySelector('#testModeEnabled').checked = Boolean(testSettings?.enabled);
+  document.querySelector('#testAccessCode').value = testSettings?.access_code || '';
+  const testLink = `${window.location.origin}${window.location.pathname.replace(/admin\.html$/, '')}index.html`;
+  document.querySelector('#testModeLink').href = testLink;
+  document.querySelector('#testModeLink').textContent = testLink;
+  renderTestRegistrations(testRegistrations);
+  document.querySelector('#testerSlotsUsed').textContent = (testerSessions || []).length;
   renderPosts(posts);
   renderQuestions(questions);
   window.translateAdmin?.();
@@ -194,5 +210,20 @@ document.querySelector('#pendingRegistrationList').addEventListener('click', asy
     message.textContent = 'Registration revoked. The team and position spot are available again.';
     loadDashboard();
   }
+});
+document.querySelector('#saveTestModeButton').addEventListener('click', async () => {
+  const enabled = document.querySelector('#testModeEnabled').checked;
+  const accessCode = document.querySelector('#testAccessCode').value.trim();
+  const message = document.querySelector('#testModeMessage');
+  if (accessCode.length < 4) { message.textContent = 'Use an access code with at least 4 characters.'; return; }
+  const { error } = await tournamentDb.from('test_settings').update({ enabled, access_code: accessCode }).eq('id', true);
+  if (!error && !enabled) await tournamentDb.from('test_access_sessions').delete().neq('tester_token', '');
+  message.textContent = error ? 'Could not save Test Mode.' : enabled ? 'Test Mode is ON. Share the tester link and access code.' : 'Test Mode is OFF. Tester access is blocked.';
+});
+document.querySelector('#clearTestDataButton').addEventListener('click', async () => {
+  if (!window.confirm('Delete all unofficial test registrations?')) return;
+  const { error } = await tournamentDb.from('test_registrations').delete().neq('id', 0);
+  document.querySelector('#testModeMessage').textContent = error ? 'Could not clear test registrations.' : 'All test registrations were cleared.';
+  if (!error) loadDashboard();
 });
 loadDashboard();

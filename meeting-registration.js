@@ -31,9 +31,14 @@ function applyMeetingLanguage() {
 }
 
 async function loadMeetingTeams() {
-  const { data, error } = await tournamentDb.rpc('team_availability');
+  const testMode = window.tournamentTestModeActive && window.tournamentTesterCode;
+  const { data, error } = testMode
+    ? await tournamentDb.rpc('test_registration_availability', { check_code: window.tournamentTesterCode })
+    : await tournamentDb.rpc('team_availability');
   if (error || !data) return;
-  const counts = Object.fromEntries(data.map(row => [row.team, Number(row.player_count)]));
+  const counts = testMode
+    ? data.reduce((totals, row) => ({ ...totals, [row.team]: (totals[row.team] || 0) + Number(row.player_count) }), {})
+    : Object.fromEntries(data.map(row => [row.team, Number(row.player_count)]));
   [...meetingTeamSelect.options].forEach(option => {
     if (!option.value) return;
     const count = counts[option.value] || 0;
@@ -45,7 +50,10 @@ async function loadMeetingTeams() {
 
 async function loadMeetingPositions(team) {
   const limits = { Goalkeeper: 1, Defender: 2, Midfielder: 2, Striker: 1 };
-  const { data, error } = await tournamentDb.rpc('position_availability');
+  const testMode = window.tournamentTestModeActive && window.tournamentTesterCode;
+  const { data, error } = testMode
+    ? await tournamentDb.rpc('test_registration_availability', { check_code: window.tournamentTesterCode })
+    : await tournamentDb.rpc('position_availability');
   meetingPositionSelect.selectedIndex = 0;
   if (error || !data) {
     meetingPositionSelect.disabled = false;
@@ -85,6 +93,7 @@ async function showMeetingAnnouncements() {
 }
 
 async function checkMeetingRegistrationStatus() {
+  if (window.tournamentTestModeActive) return;
   const email = localStorage.getItem('meetingRegistrationEmail');
   if (!email) return;
   const { data, error } = await tournamentDb.rpc('meeting_registration_status', { check_email: email });
@@ -118,16 +127,27 @@ document.querySelector('#meetingRegistrationForm').addEventListener('submit', as
     meetingMessage.textContent = meetingText('Use your real first and last name without nicknames or inappropriate words.', 'Usa tu nombre y apellido reales, sin apodos ni palabras inapropiadas.');
     return;
   }
-  const { error } = await tournamentDb.from('registrations').insert({
-    player_name: playerName,
-    email: String(form.get('email') || '').trim().toLowerCase(),
-    player_age: Number(form.get('age')),
-    team: form.get('team'),
-    position: form.get('position'),
-    paid: false,
-    registration_source: 'meeting',
-    registration_status: 'pending'
-  });
+  const testMode = window.tournamentTestModeActive && window.tournamentTesterCode;
+  const result = testMode
+    ? await tournamentDb.rpc('submit_test_registration', {
+      check_code: window.tournamentTesterCode,
+      test_name: playerName,
+      test_email: String(form.get('email') || '').trim().toLowerCase(),
+      test_age: Number(form.get('age')),
+      test_team: form.get('team'),
+      test_position: form.get('position')
+    })
+    : await tournamentDb.from('registrations').insert({
+      player_name: playerName,
+      email: String(form.get('email') || '').trim().toLowerCase(),
+      player_age: Number(form.get('age')),
+      team: form.get('team'),
+      position: form.get('position'),
+      paid: false,
+      registration_source: 'meeting',
+      registration_status: 'pending'
+    });
+  const { error } = result;
   if (error) {
     const problem = error.message || '';
     meetingMessage.textContent = problem.includes('TEAM_FULL')
@@ -140,8 +160,14 @@ document.querySelector('#meetingRegistrationForm').addEventListener('submit', as
     return;
   }
   meetingMessage.textContent = '';
-  localStorage.setItem('meetingRegistrationComplete', 'true');
-  localStorage.setItem('meetingRegistrationEmail', String(form.get('email') || '').trim().toLowerCase());
+  if (!testMode) {
+    localStorage.setItem('meetingRegistrationComplete', 'true');
+    localStorage.setItem('meetingRegistrationEmail', String(form.get('email') || '').trim().toLowerCase());
+  }
+  if (testMode) {
+    document.querySelector('#meetingSuccessDialog h2').textContent = meetingText('UNOFFICIAL TEST SAVED', 'PRUEBA NO OFICIAL GUARDADA');
+    document.querySelector('#meetingSuccessDialog p:last-child').textContent = meetingText('This did not create a real pending registration or payment.', 'Esto no creó un registro pendiente ni un pago real.');
+  }
   document.querySelector('#meetingSuccessDialog').showModal();
   await showMeetingAnnouncements();
   event.currentTarget.reset();
@@ -155,3 +181,7 @@ loadMeetingTeams();
 if (localStorage.getItem('meetingRegistrationComplete') === 'true') showMeetingAnnouncements();
 checkMeetingRegistrationStatus();
 setInterval(checkMeetingRegistrationStatus, 5000);
+window.addEventListener('tournament-test-ready', () => {
+  loadMeetingTeams();
+  if (meetingTeamSelect.value) loadMeetingPositions(meetingTeamSelect.value);
+});
