@@ -257,14 +257,18 @@ document.querySelector('#teamSelect')?.addEventListener('change', async (event) 
   if (newTeamField) newTeamField.hidden = event.target.value !== 'new';
   if (newTeamInput) newTeamInput.required = event.target.value === 'new';
   document.querySelector('#lockedTeam').value = event.target.value;
+  const position = document.querySelector('#positionSelect');
+  if (position) {
+    position.disabled = true;
+    position.selectedIndex = 0;
+  }
+  document.querySelector('#lockedPosition').value = '';
   await loadPositionAvailability(event.target.value);
-  event.target.disabled = true;
-  document.querySelector('#teamLockMessage').hidden = false;
+  document.querySelector('#teamLockMessage').hidden = true;
 });
 document.querySelector('#positionSelect')?.addEventListener('change', (event) => {
   document.querySelector('#lockedPosition').value = event.target.value;
-  event.target.disabled = true;
-  document.querySelector('#positionLockMessage').hidden = false;
+  document.querySelector('#positionLockMessage').hidden = true;
 });
 document.querySelector('#questionForm')?.addEventListener('submit', async (event) => {
   event.preventDefault();
