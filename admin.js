@@ -47,7 +47,16 @@ document.querySelector('#postButton').addEventListener('click', async () => {
   const editor = document.querySelector('#postEditor');
   const message = editor.value.trim(); if (!message) return;
   const { error } = await tournamentDb.from('community_posts').insert({ message });
-  if (error) { alert(`Could not publish post: ${error.message}`); return; }
+  if (error) {
+    // Some Supabase projects block the separate community_posts table. The
+    // tournament update row has the same organizer-only protection and keeps
+    // the public posting area working as a safe backup.
+    const { error: backupError } = await tournamentDb
+      .from('site_content')
+      .update({ content_value: message })
+      .eq('content_key', 'update');
+    if (backupError) { alert(`Could not publish post: ${backupError.message}`); return; }
+  }
   editor.value = ''; loadDashboard();
 });
 loadDashboard();

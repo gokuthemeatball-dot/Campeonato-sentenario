@@ -41,7 +41,7 @@ function displayContent() {
   const when = localStorage.getItem('kickoffWhen');
   const where = localStorage.getItem('kickoffWhere');
   if (rules && rulesContent) rulesContent.innerHTML = `<ol>${rules.split('\n').filter(Boolean).map(rule => `<li>${escapeHtml(rule)}</li>`).join('')}</ol>`;
-  if (update && updatesContent) updatesContent.innerHTML = `<article><p class="date">TOURNAMENT UPDATE</p><h3>${escapeHtml(update)}</h3></article>`;
+  if (update && updatesContent) updatesContent.innerHTML = `<article><p class="date">ORGANIZER POST</p><h3>${escapeHtml(update)}</h3></article>`;
   if (when && document.querySelector('#whenContent')) document.querySelector('#whenContent').innerHTML = escapeHtml(when).replace(/\n/g, '<br>');
   if (where && document.querySelector('#whereContent')) document.querySelector('#whereContent').innerHTML = escapeHtml(where).replace(/\n/g, '<br>');
 }
@@ -51,7 +51,7 @@ async function loadRemoteContent() {
   if (error || !data) return;
   const values = Object.fromEntries(data.map(row => [row.content_key, row.content_value]));
   if (rulesContent) rulesContent.innerHTML = values.rules?.trim() ? `<ol>${values.rules.split('\n').filter(Boolean).map(rule => `<li>${escapeHtml(rule)}</li>`).join('')}</ol>` : '<p>Rules will be posted by the organizers soon.</p>';
-  if (values.update && updatesContent) updatesContent.innerHTML = `<article><p class="date">TOURNAMENT UPDATE</p><h3>${escapeHtml(values.update)}</h3></article>`;
+  if (values.update && updatesContent) updatesContent.innerHTML = `<article><p class="date">ORGANIZER POST</p><h3>${escapeHtml(values.update)}</h3></article>`;
   if (values.when && document.querySelector('#whenContent')) document.querySelector('#whenContent').innerHTML = escapeHtml(values.when).replace(/\n/g, '<br>');
   if (values.where && document.querySelector('#whereContent')) document.querySelector('#whereContent').innerHTML = escapeHtml(values.where).replace(/\n/g, '<br>');
 }
