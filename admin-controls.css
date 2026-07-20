@@ -23,6 +23,9 @@
 
 .admin-post:first-child { margin-top: 22px; }
 .admin-post textarea { width: 100%; resize: vertical; }
+.admin-post [hidden] { display: none !important; }
+.post-text { margin: 0; white-space: pre-wrap; }
+.post-editor { display: block; }
 .post-date { color: #60706a; font-size: .8rem; margin: 7px 0 12px; }
 .message { min-height: 1.4em; margin-top: 12px; }
 

@@ -11,13 +11,32 @@ function renderPosts(posts) {
   if (!posts?.length) { container.innerHTML = '<p>No community posts yet.</p>'; return; }
   container.innerHTML = posts.map(post => `
     <article class="admin-post" data-post-id="${post.id}">
-      <textarea class="post-edit" rows="4" aria-label="Edit post">${safe(post.message)}</textarea>
+      <p class="post-text">${safe(post.message)}</p>
+      <label class="post-editor" hidden>Edit post
+        <textarea class="post-edit" rows="4" maxlength="2000">${safe(post.message)}</textarea>
+      </label>
       <p class="post-date">Published ${new Date(post.created_at).toLocaleString()}</p>
-      <div class="admin-actions">
-        <button class="button button-small" type="button" data-action="save-post">Save</button>
+      <div class="admin-actions post-view-actions">
+        <button class="button button-small" type="button" data-action="edit-post">Edit</button>
         <button class="button button-small button-danger" type="button" data-action="delete-post">Delete</button>
       </div>
+      <div class="admin-actions post-edit-actions" hidden>
+        <button class="button button-small" type="button" data-action="save-post">Save changes</button>
+        <button class="button button-small" type="button" data-action="cancel-edit">Cancel</button>
+      </div>
     </article>`).join('');
+}
+
+function setPostEditMode(post, editing) {
+  post.querySelector('.post-text').hidden = editing;
+  post.querySelector('.post-editor').hidden = !editing;
+  post.querySelector('.post-view-actions').hidden = editing;
+  post.querySelector('.post-edit-actions').hidden = !editing;
+  if (editing) {
+    const editor = post.querySelector('.post-edit');
+    editor.dataset.originalMessage = post.querySelector('.post-text').textContent;
+    editor.focus();
+  }
 }
 
 function renderQuestions(questions) {
@@ -156,12 +175,30 @@ document.querySelector('#adminPosts').addEventListener('click', async (event) =>
   const post = button.closest('[data-post-id]');
   const id = Number(post.dataset.postId);
   const message = document.querySelector('#postMessage');
+  if (button.dataset.action === 'edit-post') {
+    setPostEditMode(post, true);
+    window.translateAdmin?.(post);
+    return;
+  }
+  if (button.dataset.action === 'cancel-edit') {
+    const editor = post.querySelector('.post-edit');
+    editor.value = editor.dataset.originalMessage;
+    setPostEditMode(post, false);
+    message.textContent = '';
+    return;
+  }
   if (button.dataset.action === 'save-post') {
     const newMessage = post.querySelector('.post-edit').value.trim();
     if (!newMessage) { message.textContent = 'A post cannot be empty. Delete it instead.'; return; }
+    button.disabled = true;
     const { error } = await tournamentDb.from('community_posts').update({ message: newMessage }).eq('id', id);
+    button.disabled = false;
     message.textContent = error ? 'Could not update the post.' : 'Post updated.';
-    if (!error) loadDashboard();
+    if (!error) {
+      post.querySelector('.post-text').textContent = newMessage;
+      setPostEditMode(post, false);
+    }
+    return;
   }
   if (button.dataset.action === 'delete-post') {
     if (!window.confirm('Permanently delete this post?')) return;
