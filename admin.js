@@ -56,16 +56,17 @@ function renderQuestions(questions) {
 
 function renderPendingRegistrations(registrations) {
   const container = document.querySelector('#pendingRegistrationList');
-  const pending = (registrations || []).filter(item => item.registration_source === 'meeting' && item.registration_status === 'pending');
+  const pending = (registrations || []).filter(item => item.registration_status === 'pending');
   document.querySelector('#pendingRegistrationCount').textContent = pending.length;
-  if (!pending.length) { container.innerHTML = '<p>No pending meeting registrations.</p>'; return; }
+  if (!pending.length) { container.innerHTML = '<p>No pending payment confirmations.</p>'; return; }
   container.innerHTML = pending.map(item => `
     <article class="question-item" data-registration-id="${item.id}">
       <p><strong>${safe(item.player_name)}</strong> · ${safe(item.email || 'No email')}</p>
       <p>${safe(item.team)} · ${safe(item.position || 'Position not set')} · age ${safe(item.player_age)}</p>
+      <p><strong>Payment:</strong> ${item.registration_source === 'cash_app' ? `Cash App confirmation: ${safe(item.payment_reference || 'Missing')}` : 'Paying at organizer meeting'}</p>
       <div class="admin-actions">
-        <button class="button button-small" type="button" data-action="accept-meeting-registration">Payment received — accept registration</button>
-        <button class="button button-small button-danger" type="button" data-action="revoke-meeting-registration">Payment not received — revoke request</button>
+        <button class="button button-small" type="button" data-action="accept-meeting-registration">Payment verified — accept registration</button>
+        <button class="button button-small button-danger" type="button" data-action="revoke-meeting-registration">Payment not verified — reject registration</button>
       </div>
     </article>`).join('');
 }
@@ -91,7 +92,7 @@ async function loadDashboard() {
     .map(email => `<span class="organizer-chip">${safe(email)}</span>`)
     .join('');
   const [{ data: registrations }, { data: content }, postsResult, { data: questions }, { data: testSettings }, { data: testRegistrations }, { data: testerSessions }] = await Promise.all([
-    tournamentDb.from('registrations').select('id, player_name, email, player_age, position, team, paid, registration_source, registration_status, created_at').order('created_at', { ascending: false }),
+    tournamentDb.from('registrations').select('id, player_name, email, player_age, position, team, paid, payment_reference, registration_source, registration_status, created_at').order('created_at', { ascending: false }),
     tournamentDb.from('site_content').select('content_key, content_value'),
     tournamentDb.from('community_posts').select('id, message, created_at').order('created_at', { ascending: false }),
     tournamentDb.from('player_questions').select('id, sender_name, question, organizer_reply, replied_at, created_at').order('created_at', { ascending: false }),
@@ -112,9 +113,10 @@ async function loadDashboard() {
   document.querySelector('#whereEditor').value = values.where || '';
   document.querySelector('#rulesEditor').value = values.rules || '';
   document.querySelector('#updateEditor').value = values.update || '';
-  document.querySelector('#registrationCount').textContent = (registrations || []).length;
-  document.querySelector('#moneyTotal').textContent = `$${(registrations || []).length * 5}`;
-  document.querySelector('#registrationList').innerHTML = registrations?.length ? registrations.map(player => `<p><strong>${safe(player.player_name)}</strong> · ${safe(player.team)} · ${safe(player.position || 'Position not set')} · age ${safe(player.player_age)}</p>`).join('') : 'No registrations yet.';
+  const acceptedRegistrations = (registrations || []).filter(player => player.paid === true || player.registration_status === 'accepted');
+  document.querySelector('#registrationCount').textContent = acceptedRegistrations.length;
+  document.querySelector('#moneyTotal').textContent = `$${acceptedRegistrations.length * 5}`;
+  document.querySelector('#registrationList').innerHTML = acceptedRegistrations.length ? acceptedRegistrations.map(player => `<p><strong>${safe(player.player_name)}</strong> · ${safe(player.team)} · ${safe(player.position || 'Position not set')} · age ${safe(player.player_age)}</p>`).join('') : 'No registrations yet.';
   renderPendingRegistrations(registrations);
   document.querySelector('#testModeEnabled').checked = Boolean(testSettings?.enabled);
   document.querySelector('#testAccessCode').value = testSettings?.access_code || '';
@@ -245,14 +247,14 @@ document.querySelector('#pendingRegistrationList').addEventListener('click', asy
   const id = Number(item.dataset.registrationId);
   const message = document.querySelector('#pendingRegistrationMessage');
   if (button.dataset.action === 'accept-meeting-registration') {
-    if (!window.confirm('Confirm that the $5 payment was received?')) return;
+    if (!window.confirm('Confirm that the $5 Cash App payment was verified?')) return;
     const { error } = await tournamentDb.from('registrations').update({ paid: true, registration_status: 'accepted' }).eq('id', id);
     if (error) { message.textContent = 'Could not accept this registration.'; return; }
     message.innerHTML = `Registration accepted. Give the player this link: <a href="index.html" target="_blank">${window.location.origin}${window.location.pathname.replace(/admin\.html$/, '')}index.html</a>`;
     loadDashboard();
   }
   if (button.dataset.action === 'revoke-meeting-registration') {
-    if (!window.confirm('Revoke this request because payment was not received? This frees the team and position spot.')) return;
+    if (!window.confirm('Reject this request because the payment could not be verified? This frees the team and position spot.')) return;
     const { error } = await tournamentDb.from('registrations').delete().eq('id', id);
     if (error) { message.textContent = 'Could not revoke this registration.'; return; }
     message.textContent = 'Registration revoked. The team and position spot are available again.';

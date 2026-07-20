@@ -48,11 +48,11 @@ function setSpanishText() {
     'Location will be announced.': 'El lugar se anunciará.', '$5 per player': '$5 por jugador', 'Cash App accepted': 'Se acepta Cash App',
     'Questions? Contact the tournament organizers.': '¿Preguntas? Contacta a los organizadores del torneo.', 'COMMUNITY UPDATE': 'ACTUALIZACIÓN DE LA COMUNIDAD', 'ORGANIZER POST': 'PUBLICACIÓN DEL ORGANIZADOR',
     'REGISTER<br><em>TO PLAY</em>': 'REGÍSTRATE<br><em>PARA JUGAR</em>', 'Registration is $5 per player. Players must be age 14 or older.': 'El registro cuesta $5 por jugador. Los jugadores deben tener 14 años o más.',
-    'Choose carefully': 'Elige con cuidado', 'Enter your real first and last name, choose your team and position, then pay the $5 entry fee with Cash App.': 'Escribe tu nombre y apellido reales, elige tu equipo y posición, y paga la cuota de $5 con Cash App.',
+    'Choose carefully': 'Elige con cuidado', 'Pay the $5 entry fee with Cash App, then enter the payment confirmation or reference so an organizer can verify it.': 'Paga la cuota de $5 con Cash App y luego ingresa la confirmación o referencia para que un organizador pueda verificarla.',
     'Your team selection is locked. Reload this page to choose a different team before registering.': 'Tu selección de equipo está bloqueada. Recarga la página para elegir otro equipo antes de registrarte.', 'Use your real first and last name. Nicknames, repeated letters, and fake names are not accepted.': 'Usa tu nombre y apellido reales. No se aceptan apodos, letras repetidas ni nombres falsos.', 'I confirm that I entered my real legal name, not a nickname.': 'Confirmo que ingresé mi nombre legal real, no un apodo.', 'I understand that my registration is not complete until I pay $5.': 'Entiendo que mi registro no está completo hasta que pague $5.', 'Register <span>→</span>': 'Registrarse <span>→</span>', 'Send question <span>→</span>': 'Enviar pregunta <span>→</span>'
   };
   document.querySelectorAll('a, button, p, h1, h2, h3, footer span').forEach(el => { if (strings[el.innerHTML.trim()]) el.innerHTML = strings[el.innerHTML.trim()]; });
-  document.querySelectorAll('label').forEach(label => { const text = label.firstChild; if (!text || text.nodeType !== Node.TEXT_NODE) return; const labels = {'Full legal name':'Nombre y apellido legal','Age (14 or older)':'Edad (14 años o más)','Playing position':'Posición de juego','Select your national team':'Selecciona tu selección nacional','Select your team':'Selecciona tu equipo','Your full name':'Tu nombre completo','Your question':'Tu pregunta','Organizer email':'Correo electrónico del organizador','Rules (one rule per line)':'Reglas (una regla por línea)','Update title':'Título de actualización'}; const current = text.nodeValue.trim(); if (labels[current]) text.nodeValue = labels[current]; });
+  document.querySelectorAll('label').forEach(label => { const text = label.firstChild; if (!text || text.nodeType !== Node.TEXT_NODE) return; const labels = {'Full legal name':'Nombre y apellido legal','Age (14 or older)':'Edad (14 años o más)','Playing position':'Posición de juego','Select your national team':'Selecciona tu selección nacional','Select your team':'Selecciona tu equipo','Cash App payment confirmation/reference':'Confirmación o referencia de pago de Cash App','Your full name':'Tu nombre completo','Your question':'Tu pregunta','Organizer email':'Correo electrónico del organizador','Rules (one rule per line)':'Reglas (una regla por línea)','Update title':'Título de actualización'}; const current = text.nodeValue.trim(); if (labels[current]) text.nodeValue = labels[current]; });
   const countryNames = {Spain:'España',England:'Inglaterra',Belgium:'Bélgica',Netherlands:'Países Bajos',Germany:'Alemania',Croatia:'Croacia',Italy:'Italia',Mexico:'México','U.S.A.':'Estados Unidos',Japan:'Japón',Morocco:'Marruecos'};
   document.querySelectorAll('#teamSelect option').forEach(option => { if (countryNames[option.textContent]) option.textContent = countryNames[option.textContent]; });
   const fallbackStrings = {
@@ -249,7 +249,14 @@ document.querySelector('#registrationForm')?.addEventListener('submit', async (e
       test_position: form.get('lockedPosition')
     })
     : await tournamentDb.from('registrations').insert({
-      player_name: playerName, player_age: Number(form.get('age')), position: form.get('lockedPosition'), team: form.get('lockedTeam')
+      player_name: playerName,
+      player_age: Number(form.get('age')),
+      position: form.get('lockedPosition'),
+      team: form.get('lockedTeam'),
+      payment_reference: String(form.get('paymentReference') || '').trim(),
+      paid: false,
+      registration_source: 'cash_app',
+      registration_status: 'pending'
     });
   const { error } = result;
   if (error) {
@@ -282,6 +289,7 @@ document.querySelector('#registrationForm')?.addEventListener('submit', async (e
     paymentLink.textContent = isSpanish ? 'Simular pago exitoso →' : 'Simulate successful payment →';
     paymentLink.removeAttribute('target');
   }
+  if (!testMode) event.currentTarget.reset();
   paymentDialog.showModal();
 });
 paymentDialog?.querySelector('a')?.addEventListener('click', async event => {
