@@ -13,7 +13,7 @@ function renderPosts(posts) {
     <article class="admin-post" data-post-id="${post.id}">
       <p class="post-text">${safe(post.message)}</p>
       <label class="post-editor" hidden>Edit post
-        <textarea class="post-edit" rows="4" maxlength="2000">${safe(post.message)}</textarea>
+        <textarea class="post-edit" rows="4" maxlength="1000">${safe(post.message)}</textarea>
       </label>
       <p class="post-date">Published ${new Date(post.created_at).toLocaleString()}</p>
       <div class="admin-actions post-view-actions">
@@ -90,7 +90,7 @@ async function loadDashboard() {
   document.querySelector('#organizerTeam').innerHTML = organizerEmails
     .map(email => `<span class="organizer-chip">${safe(email)}</span>`)
     .join('');
-  const [{ data: registrations }, { data: content }, { data: posts }, { data: questions }, { data: testSettings }, { data: testRegistrations }, { data: testerSessions }] = await Promise.all([
+  const [{ data: registrations }, { data: content }, postsResult, { data: questions }, { data: testSettings }, { data: testRegistrations }, { data: testerSessions }] = await Promise.all([
     tournamentDb.from('registrations').select('id, player_name, email, player_age, position, team, paid, registration_source, registration_status, created_at').order('created_at', { ascending: false }),
     tournamentDb.from('site_content').select('content_key, content_value'),
     tournamentDb.from('community_posts').select('id, message, created_at').order('created_at', { ascending: false }),
@@ -100,6 +100,14 @@ async function loadDashboard() {
     tournamentDb.from('test_access_sessions').select('tester_token')
   ]);
   const values = Object.fromEntries((content || []).map(row => [row.content_key, row.content_value]));
+  const postMessage = document.querySelector('#postMessage');
+  if (postsResult.error) {
+    postMessage.textContent = 'Could not load posts. Run community-posts-admin-fix.sql in Supabase.';
+    postMessage.dataset.loadError = 'true';
+  } else if (postMessage.dataset.loadError === 'true') {
+    postMessage.textContent = '';
+    delete postMessage.dataset.loadError;
+  }
   document.querySelector('#whenEditor').value = values.when || '';
   document.querySelector('#whereEditor').value = values.where || '';
   document.querySelector('#rulesEditor').value = values.rules || '';
@@ -115,7 +123,7 @@ async function loadDashboard() {
   document.querySelector('#testModeLink').textContent = testLink;
   renderTestRegistrations(testRegistrations);
   document.querySelector('#testerSlotsUsed').textContent = (testerSessions || []).length;
-  renderPosts(posts);
+  renderPosts(postsResult.data);
   renderQuestions(questions);
   window.translateAdmin?.();
 }
@@ -157,16 +165,7 @@ document.querySelector('#postButton').addEventListener('click', async () => {
   const editor = document.querySelector('#postEditor');
   const message = editor.value.trim(); if (!message) return;
   const { error } = await tournamentDb.from('community_posts').insert({ message });
-  if (error) {
-    // Some Supabase projects block the separate community_posts table. The
-    // tournament update row has the same organizer-only protection and keeps
-    // the public posting area working as a safe backup.
-    const { error: backupError } = await tournamentDb
-      .from('site_content')
-      .update({ content_value: message })
-      .eq('content_key', 'update');
-    if (backupError) { document.querySelector('#postMessage').textContent = `Could not publish post: ${backupError.message}`; return; }
-  }
+  if (error) { document.querySelector('#postMessage').textContent = `Could not publish post: ${error.message}`; return; }
   editor.value = ''; document.querySelector('#postMessage').textContent = 'Post published.'; loadDashboard();
 });
 document.querySelector('#adminPosts').addEventListener('click', async (event) => {
@@ -191,10 +190,16 @@ document.querySelector('#adminPosts').addEventListener('click', async (event) =>
     const newMessage = post.querySelector('.post-edit').value.trim();
     if (!newMessage) { message.textContent = 'A post cannot be empty. Delete it instead.'; return; }
     button.disabled = true;
-    const { error } = await tournamentDb.from('community_posts').update({ message: newMessage }).eq('id', id);
+    const { data: updatedPost, error } = await tournamentDb
+      .from('community_posts')
+      .update({ message: newMessage })
+      .eq('id', id)
+      .select('id')
+      .maybeSingle();
     button.disabled = false;
-    message.textContent = error ? 'Could not update the post.' : 'Post updated.';
-    if (!error) {
+    const updateFailed = error || !updatedPost;
+    message.textContent = updateFailed ? 'Could not update the post. Check the Supabase admin policies.' : 'Post updated.';
+    if (!updateFailed) {
       post.querySelector('.post-text').textContent = newMessage;
       setPostEditMode(post, false);
     }
@@ -202,9 +207,15 @@ document.querySelector('#adminPosts').addEventListener('click', async (event) =>
   }
   if (button.dataset.action === 'delete-post') {
     if (!window.confirm('Permanently delete this post?')) return;
-    const { error } = await tournamentDb.from('community_posts').delete().eq('id', id);
-    message.textContent = error ? 'Could not delete the post.' : 'Post deleted.';
-    if (!error) loadDashboard();
+    const { data: deletedPost, error } = await tournamentDb
+      .from('community_posts')
+      .delete()
+      .eq('id', id)
+      .select('id')
+      .maybeSingle();
+    const deleteFailed = error || !deletedPost;
+    message.textContent = deleteFailed ? 'Could not delete the post. Check the Supabase admin policies.' : 'Post deleted.';
+    if (!deleteFailed) loadDashboard();
   }
 });
 document.querySelector('#questionList').addEventListener('click', async (event) => {
