@@ -15,7 +15,7 @@ function renderPosts(posts) {
       <label class="post-editor" hidden>Edit post
         <textarea class="post-edit" rows="4" maxlength="1000">${safe(post.message)}</textarea>
       </label>
-      <p class="post-date">Published ${new Date(post.created_at).toLocaleString()}</p>
+      <p class="post-date">${post.updated_at ? 'Updated' : 'Published'} ${new Date(post.updated_at || post.created_at).toLocaleString()}</p>
       <div class="admin-actions post-view-actions">
         <button class="button button-small" type="button" data-action="edit-post">Edit</button>
         <button class="button button-small button-danger" type="button" data-action="delete-post">Delete</button>
@@ -94,7 +94,7 @@ async function loadDashboard() {
   const [{ data: registrations }, { data: content }, postsResult, { data: questions }, { data: testSettings }, { data: testRegistrations }, { data: testerSessions }] = await Promise.all([
     tournamentDb.from('registrations').select('id, player_name, email, player_age, position, team, paid, payment_reference, registration_source, registration_status, created_at').order('created_at', { ascending: false }),
     tournamentDb.from('site_content').select('content_key, content_value'),
-    tournamentDb.from('community_posts').select('id, message, created_at').order('created_at', { ascending: false }),
+    tournamentDb.from('community_posts').select('id, message, created_at, updated_at').order('created_at', { ascending: false }),
     tournamentDb.from('player_questions').select('id, sender_name, question, organizer_reply, replied_at, created_at').order('created_at', { ascending: false }),
     tournamentDb.from('test_settings').select('enabled, access_code').eq('id', true).maybeSingle(),
     tournamentDb.from('test_registrations').select('player_name, email, player_age, team, position, simulated_payment, created_at').order('created_at', { ascending: false }),
@@ -194,7 +194,7 @@ document.querySelector('#adminPosts').addEventListener('click', async (event) =>
     button.disabled = true;
     const { data: updatedPost, error } = await tournamentDb
       .from('community_posts')
-      .update({ message: newMessage })
+      .update({ message: newMessage, updated_at: new Date().toISOString() })
       .eq('id', id)
       .select('id')
       .maybeSingle();

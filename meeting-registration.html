@@ -32,6 +32,7 @@
       </div>
 
       <form id="meetingRegistrationForm">
+        <label class="form-trap" aria-hidden="true">Website<input name="website" tabindex="-1" autocomplete="off" /></label>
         <label><span data-en="Full legal name" data-es="Nombre y apellido legal">Full legal name</span><input required name="playerName" minlength="5" maxlength="80" autocomplete="name" placeholder="First and last name" /></label>
         <label><span data-en="Email address" data-es="Correo electrónico">Email address</span><input required type="email" name="email" maxlength="254" autocomplete="email" placeholder="name@example.com" /></label>
         <label><span data-en="Age (14 or older)" data-es="Edad (14 años o más)">Age (14 or older)</span><input required type="number" name="age" min="14" max="100" /></label>
@@ -72,6 +73,6 @@
   <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
   <script src="supabase.js?v=6"></script>
   <script src="test-gate.js?v=3"></script>
-  <script src="meeting-registration.js?v=4"></script>
+  <script src="meeting-registration.js?v=5"></script>
 </body>
 </html>

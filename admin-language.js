@@ -45,6 +45,7 @@ const adminTranslations = {
   'New post message': 'Mensaje de la nueva publicación',
   'Publish post': 'Publicar',
   'PUBLISHED POSTS': 'PUBLICACIONES PUBLICADAS',
+  'Use Edit to change a previously published post.': 'Usa Editar para cambiar una publicación anterior.',
   'Edit': 'Editar',
   'Edit post': 'Editar publicación',
   'Save changes': 'Guardar cambios',

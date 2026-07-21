@@ -1,4 +1,14 @@
 let meetingSpanish = localStorage.getItem('tournamentLanguage') === 'es';
+const meetingFormStartedAt = Date.now();
+
+function meetingSubmissionToken() {
+  let token = localStorage.getItem('tournamentSubmissionToken');
+  if (!token || !/^[0-9a-f-]{36}$/i.test(token)) {
+    token = crypto.randomUUID();
+    localStorage.setItem('tournamentSubmissionToken', token);
+  }
+  return token;
+}
 const meetingTeamSelect = document.querySelector('#meetingTeamSelect');
 const meetingPositionSelect = document.querySelector('#meetingPositionSelect');
 const meetingMessage = document.querySelector('#meetingRegistrationMessage');
@@ -137,20 +147,24 @@ document.querySelector('#meetingRegistrationForm').addEventListener('submit', as
       test_team: form.get('team'),
       test_position: form.get('position')
     })
-    : await tournamentDb.from('registrations').insert({
-      player_name: playerName,
-      email: String(form.get('email') || '').trim().toLowerCase(),
-      player_age: Number(form.get('age')),
-      team: form.get('team'),
-      position: form.get('position'),
-      paid: false,
-      registration_source: 'meeting',
-      registration_status: 'pending'
+    : await tournamentDb.rpc('submit_meeting_registration', {
+      p_player_name: playerName,
+      p_email: String(form.get('email') || '').trim().toLowerCase(),
+      p_player_age: Number(form.get('age')),
+      p_team: form.get('team'),
+      p_position: form.get('position'),
+      p_submission_token: meetingSubmissionToken(),
+      p_honeypot: String(form.get('website') || ''),
+      p_form_elapsed_ms: Date.now() - meetingFormStartedAt
     });
   const { error } = result;
   if (error) {
     const problem = error.message || '';
-    meetingMessage.textContent = problem.includes('TEAM_FULL')
+    meetingMessage.textContent = problem.includes('SUBMISSION_RATE_LIMIT')
+      ? meetingText('Too many attempts. Wait one hour before trying again.', 'Demasiados intentos. Espera una hora antes de intentarlo de nuevo.')
+      : problem.includes('BOT_DETECTED')
+        ? meetingText('The form could not be verified. Reload and try again.', 'No se pudo verificar el formulario. Recarga e inténtalo de nuevo.')
+        : problem.includes('TEAM_FULL')
       ? meetingText('That team is now full. Choose another team.', 'Ese equipo ya está lleno. Elige otro equipo.')
       : problem.includes('POSITION_FULL')
         ? meetingText('That position was just taken. Choose another position.', 'Esa posición acaba de ocuparse. Elige otra posición.')

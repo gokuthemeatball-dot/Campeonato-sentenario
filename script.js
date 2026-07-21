@@ -7,6 +7,16 @@ const storedUpdate = localStorage.getItem('kickoffUpdate');
 const pageEnglish = document.body.innerHTML;
 let isSpanish = localStorage.getItem('tournamentLanguage') === 'es';
 let currentPublicTestRegistrationId = null;
+const registrationFormStartedAt = Date.now();
+
+function submissionToken() {
+  let token = localStorage.getItem('tournamentSubmissionToken');
+  if (!token || !/^[0-9a-f-]{36}$/i.test(token)) {
+    token = crypto.randomUUID();
+    localStorage.setItem('tournamentSubmissionToken', token);
+  }
+  return token;
+}
 
 const playerEmailField = document.querySelector('#registrationForm input[name="email"]');
 playerEmailField?.closest('label').remove();
@@ -248,20 +258,26 @@ document.querySelector('#registrationForm')?.addEventListener('submit', async (e
       test_team: form.get('lockedTeam'),
       test_position: form.get('lockedPosition')
     })
-    : await tournamentDb.from('registrations').insert({
-      player_name: playerName,
-      player_age: Number(form.get('age')),
-      position: form.get('lockedPosition'),
-      team: form.get('lockedTeam'),
-      payment_reference: String(form.get('paymentReference') || '').trim(),
-      paid: false,
-      registration_source: 'cash_app',
-      registration_status: 'pending'
+    : await tournamentDb.rpc('submit_cash_app_registration', {
+      p_player_name: playerName,
+      p_player_age: Number(form.get('age')),
+      p_position: form.get('lockedPosition'),
+      p_team: form.get('lockedTeam'),
+      p_payment_reference: String(form.get('paymentReference') || '').trim(),
+      p_submission_token: submissionToken(),
+      p_honeypot: String(form.get('website') || ''),
+      p_form_elapsed_ms: Date.now() - registrationFormStartedAt
     });
   const { error } = result;
   if (error) {
     const errorMessage = error.message || '';
-    if (errorMessage.includes('TEAM_FULL')) {
+    if (errorMessage.includes('SUBMISSION_RATE_LIMIT')) {
+      alert(isSpanish ? 'Demasiados intentos. Espera una hora antes de intentarlo de nuevo.' : 'Too many attempts. Wait one hour before trying again.');
+    } else if (errorMessage.includes('PAYMENT_REFERENCE_USED')) {
+      alert(isSpanish ? 'Esta confirmación de pago ya fue utilizada.' : 'This payment confirmation was already used.');
+    } else if (errorMessage.includes('BOT_DETECTED')) {
+      alert(isSpanish ? 'No se pudo verificar el formulario. Recarga la página e inténtalo de nuevo.' : 'The form could not be verified. Reload the page and try again.');
+    } else if (errorMessage.includes('TEAM_FULL')) {
       alert(isSpanish
         ? 'Ese equipo ya tiene 6 jugadores. Recarga la página y elige otro equipo.'
         : 'That team already has 6 players. Please reload and choose another team.');
@@ -328,7 +344,11 @@ document.querySelector('#questionForm')?.addEventListener('submit', async (event
     status.textContent = isSpanish ? 'Pregunta de prueba simulada. No se publicó.' : 'Test question simulated. Nothing was published.';
     return;
   }
-  const { error } = await tournamentDb.from('player_questions').insert({ sender_name: senderName, question });
+  const { error } = await tournamentDb.rpc('submit_player_question', {
+    p_sender_name: senderName,
+    p_question: question,
+    p_submission_token: submissionToken()
+  });
   if (error) { status.textContent = isSpanish ? 'No se pudo enviar tu pregunta. Inténtalo de nuevo.' : 'Your question could not be sent. Please try again.'; return; }
   event.currentTarget.reset();
   status.textContent = isSpanish ? 'Tu pregunta fue enviada a los organizadores.' : 'Your question was sent to the organizers.';
