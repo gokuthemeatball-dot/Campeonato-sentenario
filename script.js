@@ -18,7 +18,7 @@ const bossStart = { x: 28, y: 17 };
 const fuse = { x: 3, y: 17, name: 'stockroom fuse' };
 const keycard = { x: 28, y: 2, name: 'office keycard' };
 const exit = { x: 30, y: 18, name: 'loading exit' };
-const cleaningSpots = [{x:7,y:7},{x:16,y:12},{x:24,y:7}];
+const cleaningSpots = [{x:4,y:3},{x:7,y:3},{x:7,y:7}];
 const hideSpots = [{x:6,y:2},{x:25,y:17},{x:15,y:9},{x:5,y:11},{x:26,y:8}];
 const patrolPoints = [{x:28,y:3},{x:28,y:15},{x:21,y:17},{x:12,y:17},{x:3,y:12},{x:5,y:3},{x:16,y:9}];
 
@@ -52,6 +52,7 @@ let facing;
 let phase;
 let cleanedSpots;
 let themeTimer;
+let catches;
 let audioContext;
 let ambientGain;
 let lastAnnouncement = '';
@@ -75,6 +76,7 @@ function resetGame() {
   facing = 0;
   phase = 'cleaning';
   cleanedSpots = new Set();
+  catches = 0;
   powerOn = true;
   document.querySelector('#endModal').hidden = true;
   document.querySelector('#pauseCard').hidden = true;
@@ -115,7 +117,8 @@ function updateHud() {
   keyItem.classList.toggle('found', hasKey);
   const distance = manhattan(player, boss);
   if(phase==='cleaning'){dangerStatus.textContent='SHIFT: NORMAL';dangerStatus.style.color='#c7ff4a';return;}
-  dangerStatus.textContent = distance <= 3 ? 'DANGER: CRITICAL' : distance <= 7 ? 'DANGER: NEAR' : 'DANGER: CLEAR';
+  const bossPhase=hasKey?'ENRAGED':powerOn?'HUNTING':'STALKING';
+  dangerStatus.textContent = distance <= 3 ? `${bossPhase}: CRITICAL` : distance <= 7 ? `${bossPhase}: NEAR` : `${bossPhase}: DISTANT`;
   dangerStatus.style.color = distance <= 3 ? '#ff414d' : distance <= 7 ? '#ffc44a' : '#c7ff4a';
 }
 
@@ -129,7 +132,7 @@ function movePlayer(dx, dy, quiet = false) {
   }
   player = next;
   noiseTurns = quiet ? 0 : 2;
-  tone(quiet ? 150 : 220, .035, dx);
+  footstepSound(dx);
   describeTile();
   updateHud();
   draw();
@@ -203,7 +206,8 @@ function interact() {
     noiseTurns = 5;
   } else if (powerOn && !hasKey && manhattan(player,keycard) <= 1) {
     hasKey = true;
-    announce('Office keycard collected. Reach the loading exit southeast.', true);
+    startTheme();
+    announce('Office keycard collected. Mr. Hollow enters his enraged phase. Reach the loading exit southeast.', true);
   } else if (hasKey && manhattan(player,exit) <= 1) {
     endGame(true);
   } else {
@@ -241,9 +245,10 @@ function audioCompass() {
 }
 
 function bossStep(time) {
-  if (!running || paused || phase==='cleaning' || time-lastBossMove < (powerOn ? 430 : 620)) return;
+  const bossDelay=hasKey?390:powerOn?590:900;
+  if (!running || paused || phase==='cleaning' || time-lastBossMove < bossDelay) return;
   lastBossMove = time;
-  const seesPlayer = manhattan(player,boss) <= (flashlight ? 7 : 4);
+  const seesPlayer = manhattan(player,boss) <= (flashlight ? (hasKey?9:6) : (hasKey?5:3));
   let target;
   if (seesPlayer || noiseTurns > 0) {
     target = player;
@@ -282,7 +287,18 @@ function findPath(start,target) {
   return path;
 }
 
-function checkCaught(){if(!hidden&&player.x===boss.x&&player.y===boss.y)endGame(false);}
+function checkCaught(){
+  if(hidden||player.x!==boss.x||player.y!==boss.y)return;
+  catches++;
+  if(catches>=3){endGame(false);return;}
+  impactSound();
+  player={...playerStart};
+  boss={...bossStart};
+  flashlight=false;
+  noiseTurns=0;
+  announce(`Mr. Hollow grabbed you, but you broke free. ${3-catches} chance${3-catches===1?'':'s'} left. He is getting faster.`,true);
+  updateHud();draw();
+}
 function endGame(success){
   running=false;won=success;
   if(themeTimer){clearInterval(themeTimer);themeTimer=null;}
@@ -351,12 +367,27 @@ function ensureAudio(){
     oscillator.start();
   });
 }
-function cleaningSound(){tone(760,.07,-.2);setTimeout(()=>tone(920,.09,.2),90);setTimeout(()=>tone(1180,.12,0),190);}
+function noiseBurst(duration=.08,volume=.035,pan=0){
+  if(!soundToggle.checked)return;ensureAudio();
+  const length=Math.max(1,Math.floor(audioContext.sampleRate*duration)),buffer=audioContext.createBuffer(1,length,audioContext.sampleRate),data=buffer.getChannelData(0);
+  for(let i=0;i<length;i++)data[i]=(Math.random()*2-1)*(1-i/length);
+  const source=audioContext.createBufferSource(),gain=audioContext.createGain(),p=audioContext.createStereoPanner?audioContext.createStereoPanner():audioContext.createGain();
+  source.buffer=buffer;gain.gain.value=volume;if('pan'in p)p.pan.value=Math.max(-1,Math.min(1,pan));source.connect(gain).connect(p).connect(audioContext.destination);source.start();
+}
+function footstepSound(pan=0){noiseBurst(.075,.028,pan);tone(105+Math.random()*24,.055,pan);}
+function cleaningSound(){noiseBurst(.38,.045,0);tone(540,.12,-.2);setTimeout(()=>noiseBurst(.28,.035,.2),150);setTimeout(()=>tone(880,.11,0),310);}
+function flashlightSound(){noiseBurst(.025,.06,0);tone(flashlight?1250:480,.035,0);setTimeout(()=>tone(flashlight?760:260,.045,0),38);}
+function impactSound(){noiseBurst(.3,.09,0);tone(58,.45,0);}
 function powerFailureSound(){[520,410,300,180].forEach((frequency,index)=>setTimeout(()=>tone(frequency,.22,0),index*110));}
+function startStoreMusic(){
+  if(themeTimer)clearInterval(themeTimer);
+  let note=0;const melody=[392,494,440,330,392,523,494,330];
+  themeTimer=setInterval(()=>{if(!running||paused||!soundToggle.checked)return;tone(melody[note%melody.length],.22,note%2?-.25:.25);if(note%4===0)tone(196,.3,0);note++;},620);
+}
 function startTheme(){
   if(themeTimer)clearInterval(themeTimer);
   let beat=0;
-  themeTimer=setInterval(()=>{if(!running||paused||!soundToggle.checked)return;const notes=[82,82,110,73];tone(notes[beat%4],.18,beat%2?-.35:.35);if(beat%4===3)keyRattle(boss.x-player.x);beat++;},480);
+  themeTimer=setInterval(()=>{if(!running||paused||!soundToggle.checked)return;const notes=hasKey?[73,82,69,92]:[82,82,110,73];tone(notes[beat%4],hasKey?.28:.22,beat%2?-.45:.45);if(beat%2===0)noiseBurst(.05,hasKey?.045:.025,0);if(beat%4===3)keyRattle(boss.x-player.x);beat++;},hasKey?320:480);
 }
 function beginHorror(){
   phase='escape';
@@ -382,7 +413,7 @@ window.addEventListener('keydown',event=>{
   else if(event.code==='KeyE'||event.code==='Space'){event.preventDefault();interact();}
   else if(event.code==='KeyC'){event.preventDefault();audioCompass();}
   else if(event.code==='KeyQ'){event.preventDefault();announce(objective(),true);}
-  else if(event.code==='KeyF'){event.preventDefault();flashlight=!flashlight;announce(`Flashlight ${flashlight?'on':'off'}.`,true);tone(flashlight?620:210,.09,0);draw();}
+  else if(event.code==='KeyF'){event.preventDefault();flashlight=!flashlight;announce(`Flashlight ${flashlight?'on':'off'}.`,true);flashlightSound();draw();}
   else if(event.code==='KeyP'){event.preventDefault();paused=!paused;document.querySelector('#pauseCard').hidden=!paused;announce(paused?'Game paused.':'Game resumed.',true);}
 },{capture:true});
 document.querySelectorAll('[data-move]').forEach(button=>button.addEventListener('click',()=>{
@@ -400,11 +431,12 @@ document.querySelector('#startButton').addEventListener('click',()=>{
   blindMode=document.querySelector('#blindModeStart').checked;
   document.querySelector('#startModal').hidden=true;
   ensureAudio();resetGame();
+  startStoreMusic();
   canvas.focus();
   tone(660,.09,0);setTimeout(()=>tone(880,.14,0),110);
   announce(`Mr. Hollow says: You're hired for the night shift. Start by cleaning the three marked spills.`,true);
 });
-document.querySelector('#restartButton').addEventListener('click',()=>{resetGame();announce(objective(),true);});
+document.querySelector('#restartButton').addEventListener('click',()=>{resetGame();startStoreMusic();announce(objective(),true);});
 document.querySelector('#accessButton').addEventListener('click',()=>{document.querySelector('#accessModal').hidden=false;});
 document.querySelector('#closeAccessButton').addEventListener('click',()=>{blindMode=document.querySelector('#blindModeStart').checked;document.querySelector('#accessModal').hidden=true;canvas.focus();});
 document.querySelector('#helpButton').addEventListener('click',()=>announce('Use left and right arrows to turn. Up walks forward. Down walks backward. Hold Shift and press Up to run. Press E to interact or hide. C gives directions. Q repeats the objective. F toggles the flashlight. P pauses.',true));
