@@ -180,6 +180,9 @@ let activeGesturePointers = new Set();
 let twoFingerTouch = false;
 let twoFingerTapCount = 0;
 let twoFingerTapTimer = null;
+let storyGestureStart = null;
+let storyGestureTapCount = 0;
+let storyGestureTapTimer = null;
 
 const spanishExact = {
   'Listen to Mr. Hollow’s instructions.':'Escucha las instrucciones del señor Hollow.',
@@ -214,6 +217,7 @@ const spanishExact = {
   'Blind gesture mode active. Turn off VoiceOver or TalkBack now. Swipe and hold to walk. Tap once, then swipe up and hold to run. Double tap to interact, triple tap for the flashlight, two-finger single tap to crouch, and two-finger double tap to eat.':'Modo de gestos para jugadores ciegos activado. Ahora desactiva VoiceOver o TalkBack. Desliza y mantén para caminar. Toca una vez y después desliza hacia arriba y mantén para correr. Toca dos veces para interactuar, tres veces para la linterna, una vez con dos dedos para agacharte y dos veces con dos dedos para comer.',
   'Blind gesture mode selected. Start the game first, then turn off VoiceOver or TalkBack when instructed.':'Modo de gestos para jugadores ciegos seleccionado. Primero inicia el juego y después desactiva VoiceOver o TalkBack cuando se te indique.',
   'Running forward.':'Corriendo hacia adelante.',
+  'Double tap anywhere to continue.':'Toca dos veces en cualquier parte para continuar.',
   'You are the new night employee. I am Mr. Hollow. While these doors are open, every customer leaves satisfied.':'Eres el nuevo empleado nocturno. Soy el señor Hollow. Mientras estas puertas estén abiertas, todos los clientes deben salir satisfechos.',
   'Understood. Where do you need me?':'Entendido. ¿Dónde me necesita?',
   'Front checkout. Three customers remain. Scan their items, take payment, and do not ask why they are shopping this late.':'La caja principal. Quedan tres clientes. Escanea sus productos, cobra y no preguntes por qué compran tan tarde.'
@@ -258,6 +262,17 @@ function applyLanguage(){
   document.querySelector('#gestureHint').textContent=es?'Usa toda la pantalla como un solo control':'Use the whole screen as one controller';
   updateGestureItemStatus();
   if(running){updateHud();draw();}
+}
+
+async function enterGestureFullscreen(){
+  try{
+    const root=document.documentElement;
+    const request=root.requestFullscreen||root.webkitRequestFullscreen;
+    if(request&&!document.fullscreenElement)await request.call(root);
+  }catch(error){}
+  try{
+    if(screen.orientation?.lock)await screen.orientation.lock('landscape');
+  }catch(error){}
 }
 
 function resetGame() {
@@ -382,7 +397,8 @@ function showDialogueStep(){
   document.querySelector('#storySpeaker').textContent=language==='es'?(step.speaker==='YOU'?'TÚ':'SEÑOR HOLLOW'):step.speaker;
   document.querySelector('#storyText').textContent=translateText(step.text);
   document.querySelector('#storyNextButton').innerHTML=language==='es'?(dialogueIndex===dialogueSteps.length-1?'INICIAR TAREA <span>→</span>':'CONTINUAR <span>→</span>'):(dialogueIndex===dialogueSteps.length-1?'BEGIN TASK <span>→</span>':'CONTINUE <span>→</span>');
-  announce(`${step.speaker} says: ${step.text}`,true);
+  const spokenSpeaker=language==='es'?(step.speaker==='YOU'?'TÚ dices:':'El señor Hollow dice:'):`${step.speaker} says:`;
+  announce(`${spokenSpeaker} ${translateText(step.text)}${blindMode?' '+translateText('Double tap anywhere to continue.'):''}`,true);
 }
 function advanceDialogue(){
   dialogueIndex++;
@@ -1430,6 +1446,23 @@ document.querySelectorAll('[data-action]').forEach(button=>button.addEventListen
 }));
 document.querySelector('#touchInteract').addEventListener('click',interact);
 document.querySelector('#storyNextButton').addEventListener('click',advanceDialogue);
+document.querySelector('#storyModal').addEventListener('pointerdown',event=>{
+  if(!blindMode||event.target.closest('button'))return;
+  storyGestureStart={x:event.clientX,y:event.clientY,time:performance.now(),id:event.pointerId};
+});
+document.querySelector('#storyModal').addEventListener('pointerup',event=>{
+  if(!storyGestureStart||event.pointerId!==storyGestureStart.id||event.target.closest('button'))return;
+  const distance=Math.hypot(event.clientX-storyGestureStart.x,event.clientY-storyGestureStart.y);
+  const duration=performance.now()-storyGestureStart.time;
+  storyGestureStart=null;
+  if(distance>24||duration>320)return;
+  storyGestureTapCount++;
+  if(storyGestureTapTimer){clearTimeout(storyGestureTapTimer);storyGestureTapTimer=null;}
+  if(storyGestureTapCount>=2){
+    storyGestureTapCount=0;
+    advanceDialogue();
+  }else storyGestureTapTimer=setTimeout(()=>{storyGestureTapCount=0;storyGestureTapTimer=null;},430);
+});
 document.querySelector('#compassButton').addEventListener('click',audioCompass);
 document.querySelector('#repeatButton').addEventListener('click',()=>announce(objective(),true));
 document.querySelector('#contrastToggle').addEventListener('change',event=>document.body.classList.toggle('extra-contrast',event.target.checked));
@@ -1449,6 +1482,7 @@ document.querySelector('#startButton').addEventListener('click',()=>{
   if(blindMode)narrationToggle.checked=true;
   document.body.classList.toggle('screen-reader-controls',blindMode);
   gestureControls.hidden=!blindMode;
+  if(blindMode)enterGestureFullscreen();
   document.querySelector('#startModal').hidden=true;
   ensureAudio();primeDangerMusic();primeDeathMusic();primeLightsOutMusic();primeStoreTrack();primeExplorationTrack();resetGame();
   (blindMode?gesturePad:canvas).focus();
