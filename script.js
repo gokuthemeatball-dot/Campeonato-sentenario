@@ -8,7 +8,10 @@ const powerStatus = document.querySelector('#powerStatus');
 const energyStatus = document.querySelector('#energyStatus');
 const fuseItem = document.querySelector('#fuseItem');
 const keyItem = document.querySelector('#keyItem');
+const foodItem = document.querySelector('#foodItem');
 const craftItem = document.querySelector('#craftItem');
+const mapItem = document.querySelector('#mapItem');
+const lureItem = document.querySelector('#lureItem');
 const narrationToggle = document.querySelector('#narrationToggle');
 const soundToggle = document.querySelector('#soundToggle');
 
@@ -24,6 +27,10 @@ const cleaningSpots = [{x:4,y:3},{x:7,y:3}];
 const foodSpots = [{x:3,y:7},{x:10,y:8},{x:23,y:12},{x:28,y:9}];
 const bottleSpot = {x:10,y:2};
 const cleanerSpot = {x:15,y:8};
+const paperSpot = {x:18,y:8};
+const markerSpot = {x:23,y:3};
+const canSpot = {x:9,y:12};
+const batterySpot = {x:28,y:14};
 const hideSpots = [{x:6,y:2},{x:25,y:17},{x:15,y:9},{x:5,y:11},{x:26,y:8}];
 const patrolPoints = [{x:28,y:3},{x:28,y:15},{x:21,y:17},{x:12,y:17},{x:3,y:12},{x:5,y:3},{x:16,y:9}];
 
@@ -65,6 +72,18 @@ let hasBottle;
 let hasCleaner;
 let hasStunBottle;
 let bossStunnedUntil;
+let foodPortions;
+let hasPaper;
+let hasMarker;
+let hasMap;
+let hasCan;
+let hasBattery;
+let hasLure;
+let showMapUntil;
+let lureTarget;
+let lureTurns;
+let flickerUntil;
+let lastFearEvent;
 let audioContext;
 let ambientGain;
 let lastAnnouncement = '';
@@ -96,6 +115,18 @@ function resetGame() {
   hasCleaner = false;
   hasStunBottle = false;
   bossStunnedUntil = 0;
+  foodPortions = 0;
+  hasPaper = false;
+  hasMarker = false;
+  hasMap = false;
+  hasCan = false;
+  hasBattery = false;
+  hasLure = false;
+  showMapUntil = 0;
+  lureTarget = null;
+  lureTurns = 0;
+  flickerUntil = 0;
+  lastFearEvent = 0;
   powerOn = true;
   document.querySelector('#endModal').hidden = true;
   document.querySelector('#pauseCard').hidden = true;
@@ -134,10 +165,15 @@ function updateHud() {
   energyStatus.style.color = energy<=20?'#ff414d':energy<=45?'#ffc44a':'#c7ff4a';
   fuseItem.textContent = `FUSE ${hasFuse ? '●' : '○'}`;
   keyItem.textContent = `KEYCARD ${hasKey ? '●' : '○'}`;
+  foodItem.textContent=`FOOD ×${foodPortions}`;
   fuseItem.classList.toggle('found', hasFuse);
   keyItem.classList.toggle('found', hasKey);
   craftItem.textContent=`STUN BOTTLE ${hasStunBottle?'●':'○'}`;
   craftItem.classList.toggle('found',hasStunBottle);
+  mapItem.textContent=`MAP ${hasMap?'●':'○'}`;
+  mapItem.classList.toggle('found',hasMap);
+  lureItem.textContent=`NOISE LURE ${hasLure?'●':'○'}`;
+  lureItem.classList.toggle('found',hasLure);
   const distance = manhattan(player, boss);
   if(phase==='cleaning'){dangerStatus.textContent='SHIFT: NORMAL';dangerStatus.style.color='#c7ff4a';return;}
   const bossPhase=hasKey?'ENRAGED':powerOn?'HUNTING':'STALKING';
@@ -210,8 +246,8 @@ function interact() {
   }
   const foodIndex=phase!=='cleaning'?foodSpots.findIndex((spot,index)=>!eatenFood.has(index)&&manhattan(player,spot)<=1):-1;
   if(foodIndex>=0){
-    eatenFood.add(foodIndex);energy=Math.min(100,energy+35);eatSound();
-    announce(`Food eaten. Energy restored to ${Math.round(energy)}.`,false);updateHud();draw();return;
+    eatenFood.add(foodIndex);foodPortions=Math.min(6,foodPortions+1);pickupSound();
+    announce(`Food packed. You now carry ${foodPortions} portion${foodPortions===1?'':'s'}. Press R to eat anywhere.`,false);updateHud();draw();return;
   }
   if(phase!=='cleaning'&&!hasBottle&&manhattan(player,bottleSpot)<=1){
     hasBottle=true;pickupSound();announce('Empty bottle collected. Find cleaner to craft a stun bottle.',false);tryCraft();updateHud();draw();return;
@@ -219,6 +255,10 @@ function interact() {
   if(phase!=='cleaning'&&!hasCleaner&&manhattan(player,cleanerSpot)<=1){
     hasCleaner=true;pickupSound();announce('Cleaner collected. Find an empty bottle to craft a stun bottle.',false);tryCraft();updateHud();draw();return;
   }
+  if(phase!=='cleaning'&&!hasPaper&&manhattan(player,paperSpot)<=1){hasPaper=true;pickupSound();announce('Store plan collected. Find a marker to finish the guidance map.',false);tryCraftMap();updateHud();draw();return;}
+  if(phase!=='cleaning'&&!hasMarker&&manhattan(player,markerSpot)<=1){hasMarker=true;pickupSound();announce('Marker collected. Find the store plan to finish the guidance map.',false);tryCraftMap();updateHud();draw();return;}
+  if(phase!=='cleaning'&&!hasCan&&manhattan(player,canSpot)<=1){hasCan=true;pickupSound();announce('Empty can collected. Find batteries to build a noise lure.',false);tryCraftLure();updateHud();draw();return;}
+  if(phase!=='cleaning'&&!hasBattery&&manhattan(player,batterySpot)<=1){hasBattery=true;pickupSound();announce('Batteries collected. Find an empty can to build a noise lure.',false);tryCraftLure();updateHud();draw();return;}
   const hide = hideSpots.find(h => manhattan(player,h) <= 1);
   if (hidden) {
     hidden = false;
@@ -267,6 +307,10 @@ function nearestImportant() {
   if(phase!=='cleaning'&&energy<55)foodSpots.forEach((spot,index)=>{if(!eatenFood.has(index))targets.push({...spot,label:'Food'});});
   if(phase!=='cleaning'&&!hasBottle)targets.push({...bottleSpot,label:'Empty bottle'});
   if(phase!=='cleaning'&&!hasCleaner)targets.push({...cleanerSpot,label:'Cleaner'});
+  if(phase!=='cleaning'&&!hasPaper)targets.push({...paperSpot,label:'Store plan'});
+  if(phase!=='cleaning'&&!hasMarker)targets.push({...markerSpot,label:'Marker'});
+  if(phase!=='cleaning'&&!hasCan)targets.push({...canSpot,label:'Empty can'});
+  if(phase!=='cleaning'&&!hasBattery)targets.push({...batterySpot,label:'Batteries'});
   targets.sort((a,b)=>manhattan(player,a)-manhattan(player,b));
   const target = targets[0];
   const dx=target.x-player.x,dy=target.y-player.y;
@@ -293,7 +337,9 @@ function bossStep(time) {
   const baseSight=flashlight ? (hasKey?9:6) : (hasKey?5:3);
   const seesPlayer = manhattan(player,boss) <= Math.max(2,baseSight-(crouching?3:0));
   let target;
-  if (seesPlayer || noiseTurns > 0) {
+  if(lureTurns>0&&lureTarget){
+    target=lureTarget;lureTurns--;
+  } else if (seesPlayer || noiseTurns > 0) {
     target = player;
     noiseTurns = Math.max(0,noiseTurns-1);
   } else {
@@ -305,6 +351,7 @@ function bossStep(time) {
   const distance = manhattan(player,boss);
   if (distance <= 6) {
     spatialCue(boss.x-player.x, distance <= 2 ? 75 : 105);
+    if(distance<=4)heartbeatSound(distance);
     if (Math.random() < .18) keyRattle(boss.x-player.x);
     if (blindMode && distance === 3) announce(`Danger. Mr. Hollow is ${directionWords(boss.x-player.x,boss.y-player.y)}, three steps away.`,true);
   }
@@ -366,6 +413,10 @@ function draw() {
   if(phase!=='cleaning')foodSpots.forEach((spot,index)=>{if(!eatenFood.has(index))drawMarker(spot,'#c7ff4a','FOOD');});
   if(phase!=='cleaning'&&!hasBottle)drawMarker(bottleSpot,'#9bc8ff','BOT');
   if(phase!=='cleaning'&&!hasCleaner)drawMarker(cleanerSpot,'#d49bff','SOAP');
+  if(phase!=='cleaning'&&!hasPaper)drawMarker(paperSpot,'#d6cfac','PLAN');
+  if(phase!=='cleaning'&&!hasMarker)drawMarker(markerSpot,'#d9a06d','PEN');
+  if(phase!=='cleaning'&&!hasCan)drawMarker(canSpot,'#a8b1ae','CAN');
+  if(phase!=='cleaning'&&!hasBattery)drawMarker(batterySpot,'#e3c866','CELL');
   if(phase!=='cleaning'&&!hasFuse)drawMarker(fuse,'#ffc44a','F');
   if(powerOn&&!hasKey)drawMarker(keycard,'#54cfff','K');
   drawMarker(exit,hasKey?'#c7ff4a':'#5a665f','EXIT');
@@ -378,9 +429,9 @@ function draw() {
   } else {
     ctx.fillStyle='#c7ff4a';ctx.font='bold 11px IBM Plex Mono';ctx.fillText('HIDDEN',player.x*TILE-4,player.y*TILE+5);
   }
-  if(phase!=='cleaning'){
+  if(phase!=='cleaning'&&manhattan(player,boss)<=7){
     const bx=boss.x*TILE+20,by=boss.y*TILE+20;
-    ctx.fillStyle='#1c2322';ctx.fillRect(bx-12,by-13,24,28);
+    ctx.shadowColor='#000';ctx.shadowBlur=18;ctx.fillStyle='#111616';ctx.fillRect(bx-15,by-18,30,38);ctx.shadowBlur=0;
     ctx.fillStyle='#ff414d';ctx.fillRect(bx-8,by-6,5,3);ctx.fillRect(bx+3,by-6,5,3);
     ctx.fillStyle='#e7ede9';ctx.fillRect(bx-2,by+2,4,13);
   }
@@ -390,6 +441,10 @@ function draw() {
     gradient.addColorStop(0,'rgba(220,255,180,.38)');gradient.addColorStop(1,'rgba(0,0,0,0)');
     ctx.fillStyle=gradient;ctx.fillRect(0,0,canvas.width,canvas.height);
   }
+  if(hasMap&&performance.now()<showMapUntil){
+    const goal=currentGoal();ctx.strokeStyle='rgba(199,255,74,.68)';ctx.lineWidth=3;ctx.setLineDash([8,8]);ctx.beginPath();ctx.moveTo(player.x*TILE+20,player.y*TILE+20);ctx.lineTo(goal.x*TILE+20,goal.y*TILE+20);ctx.stroke();ctx.setLineDash([]);
+  }
+  if(performance.now()<flickerUntil){ctx.fillStyle='rgba(0,0,0,.78)';ctx.fillRect(0,0,canvas.width,canvas.height);}
 }
 
 function drawMarker(point,color,label){
@@ -401,6 +456,7 @@ function drawMarker(point,color,label){
 function areaName(p){if(p.y<=3)return p.x>=23?'Manager office hall':'Front checkout';if(p.y>=15)return p.x<=9?'Stockroom':p.x>=23?'Loading bay':'Back aisle';return `Aisle ${Math.max(1,Math.floor(p.x/2))}`;}
 function directionWords(dx,dy){const vertical=dy<0?'north':dy>0?'south':'';const horizontal=dx<0?'west':dx>0?'east':'';return vertical&&horizontal?`${vertical}-${horizontal}`:vertical||horizontal||'here';}
 function manhattan(a,b){return Math.abs(a.x-b.x)+Math.abs(a.y-b.y);}
+function currentGoal(){return !hasFuse||!powerOn?fuse:!hasKey?keycard:exit;}
 
 function ensureAudio(){
   if(audioContext)return;
@@ -428,12 +484,31 @@ function footstepSound(pan=0){noiseBurst(.075,.028,pan);tone(105+Math.random()*2
 function cleaningSound(){noiseBurst(.38,.045,0);tone(540,.12,-.2);setTimeout(()=>noiseBurst(.28,.035,.2),150);setTimeout(()=>tone(880,.11,0),310);}
 function flashlightSound(){noiseBurst(.025,.06,0);tone(flashlight?1250:480,.035,0);setTimeout(()=>tone(flashlight?760:260,.045,0),38);}
 function eatSound(){noiseBurst(.16,.045,0);tone(330,.08,0);setTimeout(()=>tone(440,.12,0),120);}
+function heartbeatSound(distance){tone(54,.08,0);setTimeout(()=>tone(47,.1,0),120+distance*18);}
 function pickupSound(){tone(720,.06,-.2);setTimeout(()=>tone(980,.09,.2),70);}
 function tryCraft(){
   if(!hasBottle||!hasCleaner||hasStunBottle)return;
   hasStunBottle=true;
   tone(520,.08,-.3);setTimeout(()=>tone(760,.08,0),90);setTimeout(()=>tone(1040,.13,.3),180);
   announce('Stun bottle crafted. Press B when Mr. Hollow gets close.',true);
+}
+function tryCraftMap(){if(!hasPaper||!hasMarker||hasMap)return;hasMap=true;tone(480,.08,-.3);setTimeout(()=>tone(720,.12,.3),100);announce('Guidance map completed. Press M to reveal a route toward your objective.',true);}
+function tryCraftLure(){if(!hasCan||!hasBattery||hasLure)return;hasLure=true;tone(260,.07,-.2);setTimeout(()=>tone(520,.12,.2),90);announce('Noise lure assembled. Press N to pull Mr. Hollow away from you.',true);}
+function eatCarriedFood(){
+  if(!running||paused)return;
+  if(foodPortions<1){announce('No food remains in your pack.',false);return;}
+  if(energy>=95){announce('Your energy is already full.',false);return;}
+  foodPortions--;energy=Math.min(100,energy+38);eatSound();announce(`You eat one portion. Energy ${Math.round(energy)}. ${foodPortions} portions remain.`,false);updateHud();
+}
+function useMap(){
+  if(!hasMap){announce('Craft a map by collecting the store plan and marker.',false);return;}
+  const goal=currentGoal();showMapUntil=performance.now()+9000;announce(`Map route: ${directionWords(goal.x-player.x,goal.y-player.y)}, ${manhattan(player,goal)} steps.`,true);tone(620,.12,goal.x-player.x);draw();
+}
+function useLure(){
+  if(!hasLure){announce('Craft a noise lure from an empty can and batteries.',false);return;}
+  hasLure=false;lureTarget=patrolPoints.reduce((best,point)=>manhattan(player,point)>manhattan(player,best)?point:best,patrolPoints[0]);lureTurns=12;
+  [880,660,920,540].forEach((frequency,index)=>setTimeout(()=>tone(frequency,.12,lureTarget.x>player.x?1:-1),index*150));
+  announce('Noise lure deployed. Mr. Hollow turns toward the sound.',true);updateHud();
 }
 function useStunBottle(){
   if(!running||paused)return;
@@ -459,18 +534,25 @@ function startTheme(){
 function beginHorror(){
   phase='escape';
   powerOn=false;
+  foodPortions=3;
   boss={...bossStart};
   noiseTurns=0;
   powerFailureSound();
   setTimeout(()=>tone(55,.7,0),430);
   startTheme();
-  announce('The final spill is clean. The lights die. Mr. Hollow locks the doors. Find the stockroom fuse and escape.',true);
+  announce('The final spill is clean. The lights die. Mr. Hollow locks the doors. You pocket three food portions. Find the stockroom fuse and escape.',true);
 }
 function tone(frequency,duration,pan=0){if(!soundToggle.checked)return;ensureAudio();const o=audioContext.createOscillator(),g=audioContext.createGain(),p=audioContext.createStereoPanner?audioContext.createStereoPanner():audioContext.createGain();o.frequency.value=frequency;o.type='triangle';g.gain.setValueAtTime(.055,audioContext.currentTime);g.gain.exponentialRampToValueAtTime(.001,audioContext.currentTime+duration);if('pan'in p)p.pan.value=Math.max(-1,Math.min(1,pan));o.connect(g).connect(p).connect(audioContext.destination);o.start();o.stop(audioContext.currentTime+duration);}
 function spatialCue(dx,frequency){tone(frequency,.13,Math.max(-1,Math.min(1,dx/5)));}
 function keyRattle(dx){[1480,1810,1320].forEach((f,i)=>setTimeout(()=>tone(f,.025,Math.max(-1,Math.min(1,dx/5))),i*42));}
 
-function gameLoop(time){bossStep(time);requestAnimationFrame(gameLoop);}
+function fearEvent(time){
+  if(!running||paused||phase==='cleaning'||time-lastFearEvent<8000)return;
+  lastFearEvent=time+Math.random()*5000;flickerUntil=time+350+Math.random()*500;
+  if(Math.random()<.5){noiseBurst(.42,.075,boss.x>player.x?1:-1);tone(42,.55,0);}else keyRattle(boss.x-player.x);
+  draw();setTimeout(()=>{if(running)draw();},900);
+}
+function gameLoop(time){bossStep(time);fearEvent(time);requestAnimationFrame(gameLoop);}
 window.addEventListener('keydown',event=>{
   if(document.querySelector('#startModal').hidden===false||document.querySelector('#accessModal').hidden===false)return;
   const code=event.code;
@@ -482,6 +564,9 @@ window.addEventListener('keydown',event=>{
   else if(code==='KeyQ'){event.preventDefault();announce(objective(),true);}
   else if(code==='KeyF'){event.preventDefault();flashlight=!flashlight;announce(`Flashlight ${flashlight?'on':'off'}.`,true);flashlightSound();draw();}
   else if(code==='KeyB'){event.preventDefault();useStunBottle();}
+  else if(code==='KeyR'){event.preventDefault();eatCarriedFood();}
+  else if(code==='KeyM'){event.preventDefault();useMap();}
+  else if(code==='KeyN'){event.preventDefault();useLure();}
   else if(code==='KeyH'){event.preventDefault();if(!event.repeat&&!hidden){crouching=!crouching;announce(crouching?'Crouched. You can move quietly and are harder to see.':'Standing. You move normally again.',true);draw();}}
   else if(code==='KeyP'){event.preventDefault();paused=!paused;document.querySelector('#pauseCard').hidden=!paused;announce(paused?'Game paused.':'Game resumed.',true);}
 },{capture:true});
@@ -508,7 +593,7 @@ document.querySelector('#startButton').addEventListener('click',()=>{
 document.querySelector('#restartButton').addEventListener('click',()=>{resetGame();startStoreMusic();announce(objective(),true);});
 document.querySelector('#accessButton').addEventListener('click',()=>{document.querySelector('#accessModal').hidden=false;});
 document.querySelector('#closeAccessButton').addEventListener('click',()=>{blindMode=document.querySelector('#blindModeStart').checked;document.querySelector('#accessModal').hidden=true;canvas.focus();});
-document.querySelector('#helpButton').addEventListener('click',()=>announce('Left and right arrows turn. Up walks forward. Down walks backward. Shift plus Up runs. H toggles mobile crouch stealth. E uses cabinets, collects, or eats. B throws a crafted stun bottle. F toggles the flashlight. P pauses.',true));
+document.querySelector('#helpButton').addEventListener('click',()=>announce('Arrows move and turn. H toggles crouch stealth. E uses cabinets or collects items. R eats carried food. B throws a stun bottle. M uses the crafted map. N deploys a noise lure. F toggles the flashlight. P pauses.',true));
 
 resetGame();
 running = false;

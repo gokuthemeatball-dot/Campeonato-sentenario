@@ -10,6 +10,7 @@
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
   <link href="https://fonts.googleapis.com/css2?family=Barlow+Condensed:wght@600;700;800;900&family=IBM+Plex+Mono:wght@400;500;600&display=swap" rel="stylesheet" />
   <link rel="stylesheet" href="style.css?v=32" />
+  <style>.inventory div{flex-wrap:wrap}.inventory{max-width:65%}</style>
 </head>
 <body>
   <div class="noise" aria-hidden="true"></div>
@@ -43,7 +44,7 @@
       <div class="game-bottombar">
         <div class="inventory">
           <span class="label">INVENTORY</span>
-          <div><b id="fuseItem">FUSE ○</b><b id="keyItem">KEYCARD ○</b><b id="craftItem">STUN BOTTLE ○</b></div>
+          <div><b id="fuseItem">FUSE ○</b><b id="keyItem">KEYCARD ○</b><b id="foodItem">FOOD ×0</b><b id="craftItem">STUN BOTTLE ○</b><b id="mapItem">MAP ○</b><b id="lureItem">NOISE LURE ○</b></div>
         </div>
         <div class="action-log">
           <span class="label">LAST UPDATE</span>
@@ -67,6 +68,9 @@
         <div><kbd>Shift + ↑</kbd><span>run forward</span></div>
         <div><kbd>E</kbd><span>interact, collect, or eat</span></div>
         <div><kbd>B</kbd><span>throw crafted stun bottle</span></div>
+        <div><kbd>R</kbd><span>eat carried food</span></div>
+        <div><kbd>M</kbd><span>use crafted guidance map</span></div>
+        <div><kbd>N</kbd><span>deploy crafted noise lure</span></div>
         <div><kbd>H</kbd><span>crouch and move quietly</span></div>
         <div><kbd>F</kbd><span>flashlight</span></div>
         <div><kbd>P</kbd><span>pause</span></div>
@@ -119,6 +123,6 @@
   </div>
 
   <p id="liveRegion" class="sr-only" aria-live="assertive" aria-atomic="true"></p>
-  <script src="script.js?v=38"></script>
+  <script src="script.js?v=39"></script>
 </body>
 </html>
