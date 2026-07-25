@@ -9,7 +9,7 @@
   <link rel="preconnect" href="https://fonts.googleapis.com" />
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
   <link href="https://fonts.googleapis.com/css2?family=Barlow+Condensed:wght@600;700;800;900&family=IBM+Plex+Mono:wght@400;500;600&display=swap" rel="stylesheet" />
-  <link rel="stylesheet" href="style.css?v=30" />
+  <link rel="stylesheet" href="style.css?v=32" />
 </head>
 <body>
   <div class="noise" aria-hidden="true"></div>
@@ -33,7 +33,7 @@
       </div>
 
       <div class="canvas-wrap" id="canvasWrap">
-        <canvas id="gameCanvas" width="960" height="600" tabindex="0" role="application" aria-label="Night Shift game map. Use arrow keys or W A S D to move, E to interact, F for flashlight, and C for the audio compass."></canvas>
+        <canvas id="gameCanvas" width="1280" height="800" tabindex="0" role="application" aria-label="Night Shift game map. Left and right arrows turn. Up walks forward. Down walks backward. Shift plus Up runs. E interacts, F controls the flashlight, and C activates the audio compass."></canvas>
         <div class="screen-vignette" aria-hidden="true"></div>
         <div class="pause-card" id="pauseCard" hidden><strong>PAUSED</strong><span>Press P to continue</span></div>
       </div>
@@ -70,9 +70,10 @@
 
       <section class="controls-card">
         <span class="label">CONTROLS</span>
-        <div><kbd>WASD</kbd><span>or arrows · move</span></div>
+        <div><kbd>← →</kbd><span>turn left or right</span></div>
+        <div><kbd>↑ ↓</kbd><span>forward or backward</span></div>
+        <div><kbd>Shift + ↑</kbd><span>run forward</span></div>
         <div><kbd>E</kbd><span>interact or hide</span></div>
-        <div><kbd>Shift</kbd><span>walk quietly</span></div>
         <div><kbd>F</kbd><span>flashlight</span></div>
         <div><kbd>P</kbd><span>pause</span></div>
       </section>
@@ -81,10 +82,10 @@
 
   <section class="touch-controls" aria-label="Touch game controls">
     <div class="dpad">
-      <button data-move="up" aria-label="Move up">▲</button>
-      <button data-move="left" aria-label="Move left">◀</button>
-      <button data-move="down" aria-label="Move down">▼</button>
-      <button data-move="right" aria-label="Move right">▶</button>
+      <button data-move="up" aria-label="Walk forward">▲</button>
+      <button data-move="left" aria-label="Turn left">◀</button>
+      <button data-move="down" aria-label="Walk backward">▼</button>
+      <button data-move="right" aria-label="Turn right">▶</button>
     </div>
     <button id="touchInteract" class="touch-action">INTERACT</button>
   </section>
@@ -115,6 +116,6 @@
   </div>
 
   <p id="liveRegion" class="sr-only" aria-live="assertive" aria-atomic="true"></p>
-  <script src="script.js?v=31"></script>
+  <script src="script.js?v=32"></script>
 </body>
 </html>

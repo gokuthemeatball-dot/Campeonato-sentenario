@@ -11,23 +11,25 @@ const narrationToggle = document.querySelector('#narrationToggle');
 const soundToggle = document.querySelector('#soundToggle');
 
 const TILE = 40;
-const COLS = 24;
-const ROWS = 15;
+const COLS = 32;
+const ROWS = 20;
 const playerStart = { x: 2, y: 2 };
-const bossStart = { x: 21, y: 12 };
-const fuse = { x: 3, y: 12, name: 'stockroom fuse' };
-const keycard = { x: 20, y: 2, name: 'office keycard' };
-const exit = { x: 22, y: 13, name: 'loading exit' };
-const hideSpots = [{x:5,y:2},{x:18,y:12},{x:12,y:7}];
-const patrolPoints = [{x:20,y:3},{x:20,y:11},{x:14,y:12},{x:8,y:12},{x:3,y:8},{x:4,y:3}];
+const bossStart = { x: 28, y: 17 };
+const fuse = { x: 3, y: 17, name: 'stockroom fuse' };
+const keycard = { x: 28, y: 2, name: 'office keycard' };
+const exit = { x: 30, y: 18, name: 'loading exit' };
+const hideSpots = [{x:6,y:2},{x:25,y:17},{x:15,y:9},{x:5,y:11},{x:26,y:8}];
+const patrolPoints = [{x:28,y:3},{x:28,y:15},{x:21,y:17},{x:12,y:17},{x:3,y:12},{x:5,y:3},{x:16,y:9}];
 
 const walls = new Set();
 for (let x = 0; x < COLS; x++) { walls.add(`${x},0`); walls.add(`${x},${ROWS - 1}`); }
 for (let y = 0; y < ROWS; y++) { walls.add(`0,${y}`); walls.add(`${COLS - 1},${y}`); }
 [
-  [4,4,4,2],[4,8,4,2],[10,3,2,4],[10,9,2,3],
-  [14,3,2,4],[14,9,2,3],[18,4,2,5],[2,10,3,1],
-  [6,12,7,1],[17,2,1,2],[21,5,2,1]
+  [4,4,5,2],[4,9,5,2],[4,14,5,2],
+  [12,3,2,5],[12,10,2,5],
+  [17,4,5,2],[17,9,5,2],[17,14,5,2],
+  [25,3,2,5],[25,10,2,5],
+  [2,13,2,1],[9,17,7,1],[23,17,4,1],[29,6,2,1]
 ].forEach(([x,y,w,h]) => {
   for (let ix=x; ix<x+w; ix++) for (let iy=y; iy<y+h; iy++) walls.add(`${ix},${iy}`);
 });
@@ -45,6 +47,7 @@ let won;
 let noiseTurns;
 let lastBossMove;
 let patrolIndex;
+let facing;
 let audioContext;
 let ambientGain;
 let lastAnnouncement = '';
@@ -64,6 +67,7 @@ function resetGame() {
   noiseTurns = 0;
   lastBossMove = 0;
   patrolIndex = 0;
+  facing = 0;
   document.querySelector('#endModal').hidden = true;
   document.querySelector('#pauseCard').hidden = true;
   updateHud();
@@ -120,6 +124,26 @@ function movePlayer(dx, dy, quiet = false) {
   updateHud();
   draw();
   checkCaught();
+}
+
+const facingVectors = [{x:0,y:-1},{x:1,y:0},{x:0,y:1},{x:-1,y:0}];
+const facingNames = ['north','east','south','west'];
+function turnPlayer(amount) {
+  if (!running || paused || hidden) return;
+  facing = (facing + amount + 4) % 4;
+  announce(`Facing ${facingNames[facing]}.`, blindMode);
+  tone(260,.035,amount);
+  draw();
+}
+function moveFacing(backward = false, run = false) {
+  const vector = facingVectors[facing];
+  const dx = vector.x * (backward ? -1 : 1);
+  const dy = vector.y * (backward ? -1 : 1);
+  movePlayer(dx,dy,false);
+  if (run && running && !paused && !hidden) {
+    noiseTurns = 5;
+    movePlayer(dx,dy,false);
+  }
 }
 
 function describeTile() {
@@ -259,6 +283,8 @@ function draw() {
   if(!hidden) {
     ctx.beginPath();ctx.fillStyle=flashlight?'#c7ff4a':'#9aa8a3';ctx.arc(player.x*TILE+20,player.y*TILE+20,11,0,Math.PI*2);ctx.fill();
     ctx.strokeStyle='#fff';ctx.lineWidth=2;ctx.stroke();
+    const face=facingVectors[facing];
+    ctx.beginPath();ctx.moveTo(player.x*TILE+20,player.y*TILE+20);ctx.lineTo(player.x*TILE+20+face.x*18,player.y*TILE+20+face.y*18);ctx.strokeStyle='#07100d';ctx.lineWidth=4;ctx.stroke();
   } else {
     ctx.fillStyle='#c7ff4a';ctx.font='bold 11px IBM Plex Mono';ctx.fillText('HIDDEN',player.x*TILE-4,player.y*TILE+5);
   }
@@ -278,7 +304,7 @@ function drawMarker(point,color,label){
   ctx.fillStyle=color;ctx.fillRect(point.x*TILE+6,point.y*TILE+6,TILE-12,TILE-12);
   ctx.fillStyle='#07100d';ctx.font='bold 9px IBM Plex Mono';ctx.textAlign='center';ctx.fillText(label,point.x*TILE+20,point.y*TILE+24);ctx.textAlign='start';
 }
-function areaName(p){if(p.y<=3)return p.x>=16?'Manager office hall':'Front checkout';if(p.y>=10)return p.x<=6?'Stockroom':p.x>=17?'Loading bay':'Back aisle';return `Aisle ${Math.max(1,Math.floor(p.x/2))}`;}
+function areaName(p){if(p.y<=3)return p.x>=23?'Manager office hall':'Front checkout';if(p.y>=15)return p.x<=9?'Stockroom':p.x>=23?'Loading bay':'Back aisle';return `Aisle ${Math.max(1,Math.floor(p.x/2))}`;}
 function directionWords(dx,dy){const vertical=dy<0?'north':dy>0?'south':'';const horizontal=dx<0?'west':dx>0?'east':'';return vertical&&horizontal?`${vertical}-${horizontal}`:vertical||horizontal||'here';}
 function manhattan(a,b){return Math.abs(a.x-b.x)+Math.abs(a.y-b.y);}
 
@@ -304,9 +330,10 @@ function keyRattle(dx){[1480,1810,1320].forEach((f,i)=>setTimeout(()=>tone(f,.02
 function gameLoop(time){bossStep(time);requestAnimationFrame(gameLoop);}
 window.addEventListener('keydown',event=>{
   if(document.querySelector('#startModal').hidden===false)return;
-  const quiet=event.shiftKey;
-  const moves={KeyW:[0,-1],ArrowUp:[0,-1],KeyS:[0,1],ArrowDown:[0,1],KeyA:[-1,0],ArrowLeft:[-1,0],KeyD:[1,0],ArrowRight:[1,0]};
-  if(moves[event.code]){event.preventDefault();movePlayer(...moves[event.code],quiet);}
+  if(event.code==='ArrowUp'){event.preventDefault();moveFacing(false,event.shiftKey);}
+  else if(event.code==='ArrowDown'){event.preventDefault();moveFacing(true,false);}
+  else if(event.code==='ArrowLeft'){event.preventDefault();turnPlayer(-1);}
+  else if(event.code==='ArrowRight'){event.preventDefault();turnPlayer(1);}
   else if(event.code==='KeyE'||event.code==='Space'){event.preventDefault();interact();}
   else if(event.code==='KeyC'){event.preventDefault();audioCompass();}
   else if(event.code==='KeyQ'){event.preventDefault();announce(objective(),true);}
@@ -314,7 +341,10 @@ window.addEventListener('keydown',event=>{
   else if(event.code==='KeyP'){event.preventDefault();paused=!paused;document.querySelector('#pauseCard').hidden=!paused;announce(paused?'Game paused.':'Game resumed.',true);}
 },{capture:true});
 document.querySelectorAll('[data-move]').forEach(button=>button.addEventListener('click',()=>{
-  const map={up:[0,-1],down:[0,1],left:[-1,0],right:[1,0]};movePlayer(...map[button.dataset.move],false);
+  const action=button.dataset.move;
+  if(action==='up')moveFacing(false,false);
+  else if(action==='down')moveFacing(true,false);
+  else turnPlayer(action==='left'?-1:1);
 }));
 document.querySelector('#touchInteract').addEventListener('click',interact);
 document.querySelector('#compassButton').addEventListener('click',audioCompass);
@@ -330,7 +360,7 @@ document.querySelector('#startButton').addEventListener('click',()=>{
   announce(`Night Shift begins. ${objective()} Press C at any time for the audio compass.`,true);
 });
 document.querySelector('#restartButton').addEventListener('click',()=>{resetGame();announce(objective(),true);});
-document.querySelector('#helpButton').addEventListener('click',()=>announce('Move with W A S D or arrow keys. Press E to interact or hide. C gives directions. Q repeats the objective. Shift moves quietly. F toggles the flashlight. P pauses.',true));
+document.querySelector('#helpButton').addEventListener('click',()=>announce('Use left and right arrows to turn. Up walks forward. Down walks backward. Hold Shift and press Up to run. Press E to interact or hide. C gives directions. Q repeats the objective. F toggles the flashlight. P pauses.',true));
 
 draw();
 requestAnimationFrame(gameLoop);
