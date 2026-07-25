@@ -6,6 +6,8 @@ const visualMessage = document.querySelector('#visualMessage');
 const dangerStatus = document.querySelector('#dangerStatus');
 const powerStatus = document.querySelector('#powerStatus');
 const energyStatus = document.querySelector('#energyStatus');
+const chanceItem = document.querySelector('#chanceItem');
+const memoryItem = document.querySelector('#memoryItem');
 const fuseItem = document.querySelector('#fuseItem');
 const keyItem = document.querySelector('#keyItem');
 const foodItem = document.querySelector('#foodItem');
@@ -149,6 +151,8 @@ let storeTrackFadeTimer;
 let explorationTrackActive;
 let explorationFadeTimer;
 let explorationSegmentTimer;
+let memoryFragments;
+let memorySideTaskActive;
 let audioContext;
 let ambientGain;
 let lastAnnouncement = '';
@@ -225,6 +229,8 @@ function resetGame() {
   lightsOutMusicActive = false;
   storeTrackActive = false;
   explorationTrackActive = false;
+  memoryFragments = [];
+  memorySideTaskActive = false;
   powerOn = true;
   document.querySelector('#endModal').hidden = true;
   document.querySelector('#storyModal').hidden = true;
@@ -296,6 +302,11 @@ function updateHud() {
   powerStatus.style.color = powerOn ? '#c7ff4a' : '#ff414d';
   energyStatus.textContent = `ENERGY: ${Math.round(energy)}`;
   energyStatus.style.color = energy<=20?'#ff414d':energy<=45?'#ffc44a':'#c7ff4a';
+  chanceItem.textContent=`CHANCES ×${Math.max(0,6-catches)}`;
+  chanceItem.style.color=catches>=5?'#ff414d':catches>=3?'#ffc44a':'';
+  const restoredMemories=memoryFragments.filter(fragment=>fragment.recovered).length;
+  memoryItem.textContent=!memoryFragments.length?'MEMORY STABLE':memorySideTaskActive?`MEMORY ${restoredMemories}/${memoryFragments.length}`:'MEMORY FADING';
+  memoryItem.classList.toggle('found',memoryFragments.length>0&&restoredMemories===memoryFragments.length);
   fuseItem.textContent = `FUSE ${hasFuse ? '●' : '○'}`;
   keyItem.textContent = `KEYCARD ${hasKey ? '●' : '○'}`;
   foodItem.textContent=`FOOD ×${foodPortions}`;
@@ -411,6 +422,21 @@ function interact() {
     announce(`Find the next marked spill. ${cleaningSpots.length-cleanedSpots.size} remain.`,true);
     return;
   }
+  const memoryIndex=phase==='escape'&&memorySideTaskActive?memoryFragments.findIndex(fragment=>!fragment.recovered&&manhattan(player,fragment)<=1):-1;
+  if(memoryIndex>=0){
+    memoryFragments[memoryIndex].recovered=true;
+    energy=Math.min(100,energy+14);
+    huntMemory=Math.max(0,huntMemory-3);
+    pickupSound();
+    const remaining=memoryFragments.filter(fragment=>!fragment.recovered).length;
+    if(remaining===0){
+      bossStunnedUntil=Math.max(bossStunnedUntil,performance.now()+4000);
+      announce('Your memory becomes whole again. Your breathing steadies, your energy rises, and Mr. Hollow loses your trail for four seconds.',true);
+    }else{
+      announce(`Memory fragment restored. ${remaining} lost fragment${remaining===1?' remains':'s remain'}.`,true);
+    }
+    updateHud();draw();return;
+  }
   const foodIndex=phase==='escape'?foodSpots.findIndex((spot,index)=>!eatenFood.has(index)&&manhattan(player,spot)<=1):-1;
   if(foodIndex>=0){
     eatenFood.add(foodIndex);foodPortions=Math.min(6,foodPortions+1);pickupSound();
@@ -498,6 +524,7 @@ function nearestImportant() {
   if(phase==='escape'&&!hasRag)targets.push({...ragSpot,label:'Rag'});
   if(phase==='escape'&&!hasCoffee)targets.push({...coffeeSpot,label:'Coffee'});
   if(phase==='escape')clueSpots.forEach((spot,index)=>{if(!foundClues.has(index))targets.push({...spot,label:'Mystery fragment'});});
+  if(phase==='escape'&&memorySideTaskActive)memoryFragments.forEach(fragment=>{if(!fragment.recovered)targets.push({...fragment,label:'Lost memory'});});
   targets.sort((a,b)=>manhattan(player,a)-manhattan(player,b));
   const target = targets[0];
   const dx=target.x-player.x,dy=target.y-player.y;
@@ -609,9 +636,12 @@ function checkCaught(){
     cabinetRipSound();
     announce('The cabinet door is ripped open. Mr. Hollow found your hiding place.',true);
   }
+  const memoryDrop={x:player.x,y:player.y,recovered:false};
   catches++;
-  triggerJumpScare(catches>=3?'CAUGHT.':'HE FOUND YOU.',true);
-  if(catches>=3){endGame(false);return;}
+  triggerJumpScare(catches>=6?'CAUGHT.':'HE FOUND YOU.',true);
+  if(catches>=6){endGame(false);return;}
+  memoryFragments.push(memoryDrop);
+  if(catches>=2)memorySideTaskActive=true;
   impactSound();
   player={...playerStart};
   boss={...bossStart};
@@ -619,7 +649,9 @@ function checkCaught(){
   noiseTurns=0;
   huntMemory=0;
   bossSearching=false;
-  announce(`Mr. Hollow grabbed you, but you broke free. ${3-catches} chance${3-catches===1?'':'s'} left. He is getting faster.`,true);
+  const chancesLeft=6-catches;
+  const memoryMessage=memorySideTaskActive?' Lost pieces of your memory remain where he caught you. Recover them as an optional side task by finding them and pressing E.':' Something from the encounter is already becoming difficult to remember.';
+  announce(`Mr. Hollow grabbed you, but you broke free. ${chancesLeft} chance${chancesLeft===1?'':'s'} left. He is getting faster.${memoryMessage}`,true);
   updateHud();draw();
 }
 function endGame(success){
@@ -663,6 +695,7 @@ function draw() {
   if(phase==='escape'&&!hasRag)drawMarker(ragSpot,'#9aaea8','RAG');
   if(phase==='escape'&&!hasCoffee)drawMarker(coffeeSpot,'#9b6948','COFFEE');
   if(phase==='escape')clueSpots.forEach((spot,index)=>{if(!foundClues.has(index))drawMarker(spot,'#ff6b84','?');});
+  if(phase==='escape'&&memorySideTaskActive)memoryFragments.forEach(fragment=>{if(!fragment.recovered)drawMarker(fragment,'#b58cff','MEM');});
   if(phase==='escape'&&!hasFuse)drawMarker(fuse,'#ffc44a','F');
   if(phase==='escape'&&powerOn&&!hasKey)drawMarker(keycard,'#54cfff','K');
   if(phase==='escape')drawMarker(exit,hasKey?'#c7ff4a':'#5a665f','EXIT');
