@@ -1169,7 +1169,9 @@ document.querySelectorAll('[data-move]').forEach(button=>button.addEventListener
 }));
 document.querySelectorAll('[data-action]').forEach(button=>button.addEventListener('click',()=>{
   const action=button.dataset.action;
-  if(action==='flashlight'){flashlight=!flashlight;announce(`Flashlight ${flashlight?'on':'off'}.`,true);flashlightSound();draw();}
+  if(action==='run')moveFacing(false,true);
+  else if(action==='repeat')announce(objective(),true);
+  else if(action==='flashlight'){flashlight=!flashlight;announce(`Flashlight ${flashlight?'on':'off'}.`,true);flashlightSound();draw();}
   else if(action==='crouch'&&!hidden){crouching=!crouching;announce(crouching?'Crouched. You move quietly.':'Standing.',true);draw();}
   else if(action==='compass')audioCompass();
   else if(action==='food')eatCarriedFood();

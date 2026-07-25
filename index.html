@@ -90,7 +90,8 @@
     </aside>
   </main>
 
-  <section class="touch-controls" aria-label="Touch game controls">
+  <section class="touch-controls" aria-label="Touch game controls" aria-describedby="mobileControlsHelp">
+    <p id="mobileControlsHelp" class="sr-only">For spoken navigation, open Accessibility and enable spoken game updates. Use Listen for the audio compass and Repeat for the current objective.</p>
     <div class="dpad">
       <button data-move="up" aria-label="Walk forward">▲</button>
       <button data-move="left" aria-label="Turn left">◀</button>
@@ -98,10 +99,12 @@
       <button data-move="right" aria-label="Turn right">▶</button>
     </div>
     <div class="touch-actions">
-      <button id="touchInteract" class="primary-touch">INTERACT</button>
+      <button id="touchInteract" class="primary-touch" aria-label="Interact, collect, clean, serve, eat, or hide">INTERACT</button>
+      <button data-action="run" aria-label="Run forward">RUN</button>
       <button data-action="flashlight" aria-label="Toggle flashlight">LIGHT</button>
       <button data-action="crouch" aria-label="Toggle crouch">CROUCH</button>
       <button data-action="compass" aria-label="Audio compass">LISTEN</button>
+      <button data-action="repeat" aria-label="Repeat current objective">REPEAT</button>
       <button data-action="food" aria-label="Eat carried food">EAT</button>
       <button data-action="camera" aria-label="Use flash camera">CAMERA</button>
       <button data-action="jammer" aria-label="Place door jammer">JAMMER</button>
@@ -161,6 +164,6 @@
   </div>
 
   <p id="liveRegion" class="sr-only" aria-live="assertive" aria-atomic="true"></p>
-  <script src="script.js?v=57"></script>
+  <script src="script.js?v=58"></script>
 </body>
 </html>
