@@ -17,6 +17,8 @@
   .wordmark strong{font-size:23px}
   header button{padding:8px;font-size:9px}
   main{padding:7px;gap:8px}
+  .game-shell{min-width:0;width:100%;overflow:hidden}
+  .game-bottombar>*{min-width:0}
   .game-topbar,.game-bottombar{padding:10px;gap:8px}
   .status-group{gap:4px}
   .status-group span{padding:6px 4px;font-size:8px}
