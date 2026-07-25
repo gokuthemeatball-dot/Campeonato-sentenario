@@ -18,18 +18,21 @@ const wedgeItem = document.querySelector('#wedgeItem');
 const maskItem = document.querySelector('#maskItem');
 const narrationToggle = document.querySelector('#narrationToggle');
 const soundToggle = document.querySelector('#soundToggle');
-const dangerMusic = new Audio('danger-song.mp3?v=50');
+const dangerMusic = new Audio('danger-song.mp3?v=51');
 dangerMusic.loop = true;
 dangerMusic.preload = 'auto';
-const deathMusic = new Audio('death-song.mp3?v=50');
+const deathMusic = new Audio('death-song.mp3?v=51');
 deathMusic.loop = true;
 deathMusic.preload = 'auto';
-const lightsOutMusic = new Audio('lights-out-song.mp3?v=50');
+const lightsOutMusic = new Audio('lights-out-song.mp3?v=51');
 lightsOutMusic.loop = false;
 lightsOutMusic.preload = 'auto';
-const storeTrack = new Audio('store-song.mp3?v=50');
+const storeTrack = new Audio('store-song.mp3?v=51');
 storeTrack.loop = true;
 storeTrack.preload = 'auto';
+const explorationTrack = new Audio('exploration-song.mp3?v=51');
+explorationTrack.loop = false;
+explorationTrack.preload = 'auto';
 
 const TILE = 40;
 const COLS = 32;
@@ -143,6 +146,9 @@ let lightsOutMusicActive;
 let lightsOutTransitionTimer;
 let storeTrackActive;
 let storeTrackFadeTimer;
+let explorationTrackActive;
+let explorationFadeTimer;
+let explorationSegmentTimer;
 let audioContext;
 let ambientGain;
 let lastAnnouncement = '';
@@ -153,6 +159,7 @@ function resetGame() {
   stopDeathMusic();
   stopLightsOutMusic();
   stopStoreTrack(true);
+  stopExplorationTrack(true);
   if(themeTimer){clearInterval(themeTimer);themeTimer=null;}
   player = {...playerStart};
   boss = {...bossStart};
@@ -216,6 +223,7 @@ function resetGame() {
   dangerFarSince = 0;
   lightsOutMusicActive = false;
   storeTrackActive = false;
+  explorationTrackActive = false;
   powerOn = true;
   document.querySelector('#endModal').hidden = true;
   document.querySelector('#storyModal').hidden = true;
@@ -618,6 +626,7 @@ function endGame(success){
   stopDangerMusic(!success);
   stopLightsOutMusic();
   stopStoreTrack(true);
+  stopExplorationTrack(true);
   if(themeTimer){clearInterval(themeTimer);themeTimer=null;}
   document.querySelector('#endKicker').textContent=success?'SHIFT SURVIVED':'SHIFT ENDED';
   document.querySelector('#endTitle').textContent=success?'YOU ESCAPED.':'CAUGHT.';
@@ -812,6 +821,7 @@ function fadeDangerMusic(target,duration,onDone){
 }
 function startDangerMusic(){
   if(dangerMusicActive||!soundToggle.checked)return;
+  stopExplorationTrack(false);
   dangerMusicActive=true;
   dangerMusic.currentTime=0;
   dangerMusic.volume=0;
@@ -833,6 +843,7 @@ function stopDangerMusic(immediate=false){
     dangerMusic.pause();
     dangerMusic.currentTime=0;
     dangerMusicActive=false;
+    playRandomExplorationSegment();
   });
 }
 function updateDangerMusic(time,distance){
@@ -892,7 +903,72 @@ function primeLightsOutMusic(){
   const primed=lightsOutMusic.play();
   if(primed)primed.then(()=>{lightsOutMusic.pause();lightsOutMusic.currentTime=0;lightsOutMusic.volume=.82;}).catch(()=>{});
 }
-lightsOutMusic.addEventListener('ended',()=>{lightsOutMusicActive=false;});
+lightsOutMusic.addEventListener('ended',()=>{
+  lightsOutMusicActive=false;
+  playRandomExplorationSegment();
+});
+function fadeExplorationTrack(target,duration,onDone){
+  if(explorationFadeTimer)clearInterval(explorationFadeTimer);
+  const startVolume=explorationTrack.volume;
+  const started=performance.now();
+  explorationFadeTimer=setInterval(()=>{
+    const progress=Math.min(1,(performance.now()-started)/duration);
+    explorationTrack.volume=Math.max(0,Math.min(1,startVolume+(target-startVolume)*progress));
+    if(progress>=1){
+      clearInterval(explorationFadeTimer);
+      explorationFadeTimer=null;
+      if(onDone)onDone();
+    }
+  },40);
+}
+function playRandomExplorationSegment(){
+  if(!running||paused||phase!=='escape'||!soundToggle.checked||lightsOutMusicActive||dangerMusicActive||explorationTrackActive)return;
+  if(manhattan(player,boss)<=7)return;
+  if(explorationSegmentTimer){clearTimeout(explorationSegmentTimer);explorationSegmentTimer=null;}
+  if(explorationFadeTimer){clearInterval(explorationFadeTimer);explorationFadeTimer=null;}
+  const segmentLength=14+Math.random()*10;
+  const duration=explorationTrack.duration;
+  explorationTrack.currentTime=Number.isFinite(duration)&&duration>segmentLength+2?Math.random()*(duration-segmentLength-1):0;
+  explorationTrack.volume=0;
+  explorationTrackActive=true;
+  explorationTrack.play().then(()=>{
+    fadeExplorationTrack(.6,700);
+    explorationSegmentTimer=setTimeout(()=>{
+      explorationSegmentTimer=null;
+      fadeExplorationTrack(0,700,()=>{
+        explorationTrack.pause();
+        explorationTrackActive=false;
+        playRandomExplorationSegment();
+      });
+    },segmentLength*1000);
+  }).catch(()=>{explorationTrackActive=false;});
+}
+function stopExplorationTrack(reset=false){
+  if(explorationSegmentTimer){clearTimeout(explorationSegmentTimer);explorationSegmentTimer=null;}
+  if(explorationFadeTimer){clearInterval(explorationFadeTimer);explorationFadeTimer=null;}
+  if(reset){
+    explorationTrack.pause();
+    explorationTrack.currentTime=0;
+    explorationTrack.volume=0;
+    explorationTrackActive=false;
+    return;
+  }
+  if(!explorationTrackActive)return;
+  fadeExplorationTrack(0,450,()=>{
+    explorationTrack.pause();
+    explorationTrackActive=false;
+  });
+}
+function primeExplorationTrack(){
+  explorationTrack.volume=0;
+  const primed=explorationTrack.play();
+  if(primed)primed.then(()=>{explorationTrack.pause();explorationTrack.currentTime=0;}).catch(()=>{});
+}
+explorationTrack.addEventListener('ended',()=>{
+  if(explorationSegmentTimer){clearTimeout(explorationSegmentTimer);explorationSegmentTimer=null;}
+  explorationTrackActive=false;
+  playRandomExplorationSegment();
+});
 function fadeStoreTrack(target,duration,onDone){
   if(storeTrackFadeTimer)clearInterval(storeTrackFadeTimer);
   const startVolume=storeTrack.volume;
@@ -1055,12 +1131,12 @@ document.querySelector('#repeatButton').addEventListener('click',()=>announce(ob
 document.querySelector('#contrastToggle').addEventListener('change',event=>document.body.classList.toggle('extra-contrast',event.target.checked));
 soundToggle.addEventListener('change',()=>{
   if(ambientGain)ambientGain.gain.setTargetAtTime(soundToggle.checked?.018:0,audioContext.currentTime,.08);
-  if(!soundToggle.checked){stopDangerMusic(true);stopDeathMusic();stopLightsOutMusic();stopStoreTrack(true);}
+  if(!soundToggle.checked){stopDangerMusic(true);stopDeathMusic();stopLightsOutMusic();stopStoreTrack(true);stopExplorationTrack(true);}
 });
 document.querySelector('#startButton').addEventListener('click',()=>{
   blindMode=document.querySelector('#blindModeStart').checked;
   document.querySelector('#startModal').hidden=true;
-  ensureAudio();primeDangerMusic();primeDeathMusic();primeLightsOutMusic();primeStoreTrack();resetGame();
+  ensureAudio();primeDangerMusic();primeDeathMusic();primeLightsOutMusic();primeStoreTrack();primeExplorationTrack();resetGame();
   canvas.focus();
   tone(660,.09,0);setTimeout(()=>tone(880,.14,0),110);
   startIntro();
