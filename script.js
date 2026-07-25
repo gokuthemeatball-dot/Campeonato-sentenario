@@ -339,7 +339,8 @@ function updateHud() {
 
 function movePlayer(dx, dy, quiet = false, energyCost = 1) {
   if (!running || paused || hidden) return;
-  if(energy<energyCost){announce('You are out of energy. Find food and press E to eat.',true);return;}
+  const energyActive=phase==='escape';
+  if(energyActive&&energy<energyCost){announce('You are out of energy. Find food and press E to eat.',true);return;}
   const next = {x:player.x+dx,y:player.y+dy};
   if (walls.has(`${next.x},${next.y}`)) {
     announce('Blocked. A shelf or wall is in that direction.', blindMode);
@@ -347,7 +348,7 @@ function movePlayer(dx, dy, quiet = false, energyCost = 1) {
     return;
   }
   player = next;
-  energy=Math.max(0,energy-energyCost);
+  if(energyActive)energy=Math.max(0,energy-energyCost);
   noiseTurns = quiet||crouching ? 0 : 2;
   footstepSound(dx);
   describeTile();
