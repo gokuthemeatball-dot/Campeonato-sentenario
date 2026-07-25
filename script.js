@@ -265,11 +265,12 @@ function advanceDialogue(){
   canvas.focus();
 }
 function startIntro(){
+  startStoreMusic();
   openDialogue([
     {speaker:'MR. HOLLOW',text:'You are the new night employee. I am Mr. Hollow. While these doors are open, every customer leaves satisfied.'},
     {speaker:'YOU',text:'Understood. Where do you need me?'},
     {speaker:'MR. HOLLOW',text:'Front checkout. Three customers remain. Scan their items, take payment, and do not ask why they are shopping this late.'}
-  ],()=>{phase='customers';announce('Walk to the front checkout and press E to serve each customer.',true);updateHud();draw();});
+  ],()=>{stopStoreMusic();phase='customers';announce('Walk to the front checkout and press E to serve each customer.',true);updateHud();draw();});
 }
 
 function updateHud() {
@@ -367,10 +368,11 @@ function interact() {
       customersServed++;
       checkoutSound();
       if(customersServed>=3){
+        startStoreMusic();
         openDialogue([
           {speaker:'MR. HOLLOW',text:'That is enough. Lock the register. The customers always leave before dark.'},
           {speaker:'MR. HOLLOW',text:'Two spills remain in aisles three and four. Clean them, then report to me. Do not open the loading door.'}
-        ],()=>{phase='cleaning';announce('Mr. Hollow orders you to clean the two marked spills.',true);updateHud();draw();});
+        ],()=>{stopStoreMusic();phase='cleaning';announce('Mr. Hollow orders you to clean the two marked spills.',true);updateHud();draw();});
       }
       updateHud();draw();return;
     }
@@ -885,6 +887,9 @@ function startStoreMusic(){
   let pulse=0;const drones=[98,103,92,87];
   themeTimer=setInterval(()=>{if(!running||paused||!soundToggle.checked||dangerMusicActive)return;tone(drones[pulse%4],.85,pulse%2?-.35:.35);if(pulse%3===0)noiseBurst(.18,.012,0);pulse++;},1100);
 }
+function stopStoreMusic(){
+  if(themeTimer){clearInterval(themeTimer);themeTimer=null;}
+}
 function startTheme(){
   if(themeTimer)clearInterval(themeTimer);
   let beat=0;
@@ -994,12 +999,11 @@ document.querySelector('#startButton').addEventListener('click',()=>{
   blindMode=document.querySelector('#blindModeStart').checked;
   document.querySelector('#startModal').hidden=true;
   ensureAudio();primeDangerMusic();primeDeathMusic();primeLightsOutMusic();resetGame();
-  startStoreMusic();
   canvas.focus();
   tone(660,.09,0);setTimeout(()=>tone(880,.14,0),110);
   startIntro();
 });
-document.querySelector('#restartButton').addEventListener('click',()=>{resetGame();startStoreMusic();startIntro();});
+document.querySelector('#restartButton').addEventListener('click',()=>{resetGame();startIntro();});
 document.querySelector('#accessButton').addEventListener('click',()=>{document.querySelector('#accessModal').hidden=false;});
 document.querySelector('#closeAccessButton').addEventListener('click',()=>{blindMode=document.querySelector('#blindModeStart').checked;document.querySelector('#accessModal').hidden=true;canvas.focus();});
 document.querySelector('#helpButton').addEventListener('click',()=>announce('Arrows move and turn. H crouches. E interacts. R eats food. B throws a stun bottle. M uses the map. N deploys a noise lure. X fires the flash camera. V places a door jammer. Z uses the scent mask. F toggles the flashlight. P pauses.',true));
