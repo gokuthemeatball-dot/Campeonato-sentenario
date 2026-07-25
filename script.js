@@ -1,391 +1,213 @@
-const paymentDialog = document.querySelector('#paymentDialog');
-const adminDialog = document.querySelector('#adminDialog');
-const rulesContent = document.querySelector('#rulesContent');
-const updatesContent = document.querySelector('#updatesContent');
-const storedRules = localStorage.getItem('kickoffRules');
-const storedUpdate = localStorage.getItem('kickoffUpdate');
-const pageEnglish = document.body.innerHTML;
-let isSpanish = localStorage.getItem('tournamentLanguage') === 'es';
-let currentPublicTestRegistrationId = null;
-const registrationFormStartedAt = Date.now();
+const fileInput = document.querySelector('#audioFile');
+const dropZone = document.querySelector('#dropZone');
+const filePanel = document.querySelector('#filePanel');
+const processingPanel = document.querySelector('#processingPanel');
+const resultsPanel = document.querySelector('#resultsPanel');
+const processButton = document.querySelector('#processButton');
+const rightsCheck = document.querySelector('#rightsCheck');
+const progressBar = document.querySelector('#progressBar');
+const progressText = document.querySelector('#progressText');
+const trackList = document.querySelector('#trackList');
 
-function submissionToken() {
-  let token = localStorage.getItem('tournamentSubmissionToken');
-  if (!token || !/^[0-9a-f-]{36}$/i.test(token)) {
-    token = crypto.randomUUID();
-    localStorage.setItem('tournamentSubmissionToken', token);
-  }
-  return token;
-}
+let selectedFile = null;
+let objectUrls = [];
+let activeAudio = null;
 
-const playerEmailField = document.querySelector('#registrationForm input[name="email"]');
-playerEmailField?.closest('label').remove();
-document.querySelector('#registrationForm input[name="age"]')?.setAttribute('min', '14');
-const teamNote = document.querySelector('.payment-note span');
-if (teamNote) teamNote.textContent = isSpanish
-  ? 'Máximo 6 jugadores por equipo. El equipo solo se cierra después de 6 registros exitosos.'
-  : 'Maximum 6 players per team. Teams only close after 6 successful registrations.';
-document.querySelector('#teamLockMessage')?.remove();
-const positionSelect = document.querySelector('#registrationForm select[name="position"]');
-if (positionSelect) {
-  positionSelect.id = 'positionSelect';
-  positionSelect.disabled = true;
-  positionSelect.insertAdjacentHTML('afterend', '<input type="hidden" id="lockedPosition" name="lockedPosition" />');
-  positionSelect.closest('label').insertAdjacentHTML('afterend', '<p class="small" id="positionAvailability">Choose a team to see available positions.</p>');
-  const teamLockMessage = document.querySelector('#teamAvailability');
-  const positionLabel = positionSelect.closest('label');
-  if (teamLockMessage && positionLabel) {
-    teamLockMessage.after(positionLabel, document.querySelector('#positionAvailability'));
-  }
-}
-
-function setSpanishText() {
-  const strings = {
-    'CENTENNIAL <span>CHAMPIONSHIP</span>': 'CAMPEONATO <span>CENTENARIO</span>',
-    'CENTENNIAL<br><em>CHAMPIONSHIP</em>': 'CAMPEONATO<br><em>CENTENARIO</em>',
-    'CENTENNIAL CHAMPIONSHIP': 'CAMPEONATO CENTENARIO',
-    'Player registration': 'Registro de jugadores', 'Registration': 'Registro', 'Posts': 'Publicaciones', 'Rules': 'Reglas', 'Tournament info': 'Información del torneo', 'Organizer Desk': 'Panel de organizadores',
-    'Home': 'Inicio', 'Football tournament': 'Torneo de fútbol', 'Football tournament • Your city': 'Torneo de fútbol • Tu ciudad',
-    'PLAY FOR<br><em>THE CUP.</em>': 'JUEGA POR<br><em>LA COPA.</em>', 'TEAM<br><em>REGISTRATION</em>': 'REGISTRO<br><em>DE EQUIPOS</em>',
-    'Build your squad. Bring your game. Take home the title.': 'Forma tu equipo. Da lo mejor. Llévate el título.',
-    'Register your team <span>→</span>': 'Regístrate <span>→</span>', 'Register now <span>→</span>': 'Regístrate ahora <span>→</span>',
-    'When': 'Cuándo', 'Where': 'Dónde', 'Entry': 'Entrada', 'PLAYER REGISTRATION': 'REGISTRO DE JUGADORES',
-    'ANNOUNCEMENTS': 'ANUNCIOS', 'TOURNAMENT INFO': 'INFORMACIÓN DEL TORNEO', 'TOURNAMENT RULES': 'REGLAS DEL TORNEO', 'REGISTRATION': 'REGISTRO', 'POSTS': 'PUBLICACIONES', 'RULES': 'REGLAS',
-    'Players age 14 and older': 'Jugadores de 14 años o más', 'News from the organizers': 'Noticias de los organizadores', 'Ask the organizers': 'Pregunta a los organizadores', 'QUESTIONS': 'PREGUNTAS', 'ANSWERED QUESTIONS': 'PREGUNTAS RESPONDIDAS', 'No answers yet.': 'Aún no hay respuestas.', 'Send a question to the tournament organizers.': 'Envía una pregunta a los organizadores del torneo.',
-    'Register to play, read posts, and check the tournament rules.': 'Regístrate para jugar, lee las publicaciones y consulta las reglas del torneo.',
-    'Choose your national team and playing position, then pay $5 to register.': 'Elige tu selección nacional y posición de juego, luego paga $5 para registrarte.',
-    'Tournament details': 'Detalles del torneo', 'Read before playing': 'Lee antes de jugar', 'Rules will be posted by the organizers soon.': 'Los organizadores publicarán las reglas pronto.', 'No posts yet.': 'Aún no hay publicaciones.', 'Date and time will be announced.': 'La fecha y hora se anunciarán.',
-    'Location will be announced.': 'El lugar se anunciará.', '$5 per player': '$5 por jugador', 'Cash App accepted': 'Se acepta Cash App',
-    'Questions? Contact the tournament organizers.': '¿Preguntas? Contacta a los organizadores del torneo.', 'COMMUNITY UPDATE': 'ACTUALIZACIÓN DE LA COMUNIDAD', 'ORGANIZER POST': 'PUBLICACIÓN DEL ORGANIZADOR',
-    'REGISTER<br><em>TO PLAY</em>': 'REGÍSTRATE<br><em>PARA JUGAR</em>', 'Registration is $5 per player. Players must be age 14 or older.': 'El registro cuesta $5 por jugador. Los jugadores deben tener 14 años o más.',
-    'Choose carefully': 'Elige con cuidado', 'Pay the $5 entry fee with Cash App, then enter the payment confirmation or reference so an organizer can verify it.': 'Paga la cuota de $5 con Cash App y luego ingresa la confirmación o referencia para que un organizador pueda verificarla.',
-    'Your team selection is locked. Reload this page to choose a different team before registering.': 'Tu selección de equipo está bloqueada. Recarga la página para elegir otro equipo antes de registrarte.', 'Use your real first and last name. Nicknames, repeated letters, and fake names are not accepted.': 'Usa tu nombre y apellido reales. No se aceptan apodos, letras repetidas ni nombres falsos.', 'I confirm that I entered my real legal name, not a nickname.': 'Confirmo que ingresé mi nombre legal real, no un apodo.', 'I understand that my registration is not complete until I pay $5.': 'Entiendo que mi registro no está completo hasta que pague $5.', 'Register <span>→</span>': 'Registrarse <span>→</span>', 'Send question <span>→</span>': 'Enviar pregunta <span>→</span>'
-  };
-  document.querySelectorAll('a, button, p, h1, h2, h3, footer span').forEach(el => { if (strings[el.innerHTML.trim()]) el.innerHTML = strings[el.innerHTML.trim()]; });
-  document.querySelectorAll('label').forEach(label => { const text = label.firstChild; if (!text || text.nodeType !== Node.TEXT_NODE) return; const labels = {'Full legal name':'Nombre y apellido legal','Age (14 or older)':'Edad (14 años o más)','Playing position':'Posición de juego','Select your national team':'Selecciona tu selección nacional','Select your team':'Selecciona tu equipo','Cash App payment confirmation/reference':'Confirmación o referencia de pago de Cash App','Your full name':'Tu nombre completo','Your question':'Tu pregunta','Organizer email':'Correo electrónico del organizador','Rules (one rule per line)':'Reglas (una regla por línea)','Update title':'Título de actualización'}; const current = text.nodeValue.trim(); if (labels[current]) text.nodeValue = labels[current]; });
-  const countryNames = {Spain:'España',England:'Inglaterra',Belgium:'Bélgica',Netherlands:'Países Bajos',Germany:'Alemania',Croatia:'Croacia',Italy:'Italia',Mexico:'México','U.S.A.':'Estados Unidos',Japan:'Japón',Morocco:'Marruecos'};
-  document.querySelectorAll('#teamSelect option').forEach(option => { if (countryNames[option.textContent]) option.textContent = countryNames[option.textContent]; });
-  const fallbackStrings = {
-    'Registration': 'Registro', 'Posts': 'Publicaciones', 'Rules': 'Reglas',
-    'Organizer Desk': 'Panel de organizadores', 'Football tournament': 'Torneo de fútbol',
-    'Register to play, read posts, and check the tournament rules.': 'Regístrate para jugar, lee las publicaciones y consulta las reglas del torneo.',
-    'Register →': 'Registrarse →', 'Players age 14 and older': 'Jugadores de 14 años o más',
-    'Choose your national team and playing position, then pay $5 to register.': 'Elige tu selección nacional y posición de juego, luego paga $5 para registrarte.',
-    'Register now →': 'Regístrate ahora →', 'News from the organizers': 'Noticias de los organizadores',
-    'No posts yet.': 'Aún no hay publicaciones.', 'Read before playing': 'Lee antes de jugar',
-    'Rules will be posted by the organizers soon.': 'Los organizadores publicarán las reglas pronto.',
-    'Questions? Contact the tournament organizers.': '¿Preguntas? Contacta a los organizadores del torneo.',
-    'Player registration': 'Registro de jugadores',
-    'Registration is $5 per player. Players must be age 14 or older.': 'El registro cuesta $5 por jugador. Los jugadores deben tener 14 años o más.',
-    'Choose carefully': 'Elige con cuidado',
-    'Enter your real first and last name, choose your team and position, then pay the $5 entry fee with Cash App.': 'Escribe tu nombre y apellido reales, elige tu equipo y posición, y paga la cuota de $5 con Cash App.',
-    '$5 per player': '$5 por jugador', 'Your team choice locks after you select it.': 'Tu selección de equipo se bloquea después de elegirla.',
-    'Use your real first and last name. Nicknames are not accepted.': 'Usa tu nombre y apellido reales. No se aceptan apodos.',
-    'Your team selection is locked.': 'Tu selección de equipo está bloqueada.',
-    'I understand that my registration is not complete until I pay $5.': 'Entiendo que mi registro no está completo hasta que pague $5.'
-  };
-  document.querySelectorAll('nav a:not(.brand), p, h2, h3, footer span, .button').forEach(element => {
-    const translated = fallbackStrings[element.textContent.trim()];
-    if (translated) element.textContent = translated;
-  });
-  document.title = document.title.replace('Centennial Championship', 'Campeonato Centenario');
-}
-document.querySelector('#languageButton')?.addEventListener('click', () => {
-  isSpanish = !isSpanish;
-  localStorage.setItem('tournamentLanguage', isSpanish ? 'es' : 'en');
-  if (!isSpanish) { location.reload(); return; }
-  document.documentElement.lang = 'es';
-  document.querySelector('#languageButton').textContent = 'English';
-  setSpanishText();
+document.querySelector('#chooseFile').addEventListener('click', () => fileInput.click());
+document.querySelector('#removeFile').addEventListener('click', resetStudio);
+document.querySelector('#startOver').addEventListener('click', resetStudio);
+rightsCheck.addEventListener('change', () => {
+  processButton.disabled = !rightsCheck.checked;
 });
-if (isSpanish) {
-  document.documentElement.lang = 'es';
-  document.querySelector('#languageButton').textContent = 'English';
-  setSpanishText();
-}
 
-function displayContent() {
-  const rules = localStorage.getItem('kickoffRules');
-  const update = localStorage.getItem('kickoffUpdate');
-  const when = localStorage.getItem('kickoffWhen');
-  const where = localStorage.getItem('kickoffWhere');
-  if (rules && rulesContent) rulesContent.innerHTML = `<ol>${rules.split('\n').filter(Boolean).map(rule => `<li>${escapeHtml(rule)}</li>`).join('')}</ol>`;
-  if (update && updatesContent) updatesContent.innerHTML = `<article><p class="date">ORGANIZER POST</p><h3>${escapeHtml(update)}</h3></article>`;
-  if (when && document.querySelector('#whenContent')) document.querySelector('#whenContent').innerHTML = escapeHtml(when).replace(/\n/g, '<br>');
-  if (where && document.querySelector('#whereContent')) document.querySelector('#whereContent').innerHTML = escapeHtml(where).replace(/\n/g, '<br>');
-}
-function escapeHtml(text) { const node = document.createElement('div'); node.textContent = text; return node.innerHTML; }
-function validRealName(name) {
-  const normalized = name.trim().replace(/\s+/g, ' ');
-  const parts = normalized.split(' ');
-  const blocked = ['test test', 'none none', 'no name', 'your name', 'first last', 'name name', 'john doe', 'jane doe', 'asdf asdf', 'fake name'];
-  const blockedWords = [
-    'pito', 'pene', 'verga', 'puta', 'puto', 'culo', 'mierda', 'cabron', 'cabrón',
-    'fuck', 'fucker', 'fucking', 'shit', 'bitch', 'asshole', 'dick', 'penis', 'porn'
-  ];
-  return parts.length >= 2 && parts.length <= 5
-    && normalized.length >= 5 && normalized.length <= 80
-    && parts.every(part => /^[\p{L}][\p{L}'’-]{1,29}$/u.test(part))
-    && !blocked.includes(normalized.toLowerCase())
-    && !parts.some(part => blockedWords.includes(part.toLowerCase()))
-    && !/(.)\1{2,}/iu.test(normalized.replace(/\s/g, ''));
-}
-
-async function loadTeamAvailability() {
-  const select = document.querySelector('#teamSelect');
-  if (!select) return;
-  const testMode = window.tournamentTestModeActive && window.tournamentTesterCode;
-  const { data, error } = testMode
-    ? await tournamentDb.rpc('test_registration_availability', { check_code: window.tournamentTesterCode })
-    : await tournamentDb.rpc('team_availability');
-  if (error || !data) return;
-  const counts = testMode
-    ? data.reduce((totals, row) => ({ ...totals, [row.team]: (totals[row.team] || 0) + Number(row.player_count) }), {})
-    : Object.fromEntries(data.map(row => [row.team, Number(row.player_count)]));
-  [...select.options].forEach(option => {
-    if (!option.value) return;
-    const count = counts[option.value] || 0;
-    option.dataset.originalLabel ||= option.textContent;
-    option.disabled = count >= 6;
-    option.textContent = `${option.dataset.originalLabel} — ${count >= 6 ? (isSpanish ? 'LLENO' : 'FULL') : `${6 - count} ${testMode ? (isSpanish ? 'lugares de prueba' : 'test spots left') : (isSpanish ? 'lugares disponibles' : 'spots left')}`}`;
-  });
-}
-async function loadPositionAvailability(team) {
-  const select = document.querySelector('#positionSelect');
-  const message = document.querySelector('#positionAvailability');
-  if (!select || !team) return;
-  const limits = { Goalkeeper: 1, Defender: 2, Midfielder: 2, Striker: 1 };
-  const testMode = window.tournamentTestModeActive && window.tournamentTesterCode;
-  const { data, error } = testMode
-    ? await tournamentDb.rpc('test_registration_availability', { check_code: window.tournamentTesterCode })
-    : await tournamentDb.rpc('position_availability');
-  if (error || !data) {
-    select.disabled = false;
-    if (message) message.textContent = isSpanish ? 'Elige una posición. La disponibilidad se verificará al registrarte.' : 'Choose a position. Availability will be checked when you register.';
-    return;
-  }
-  const counts = Object.fromEntries(data
-    .filter(row => row.team.toLowerCase() === team.toLowerCase())
-    .map(row => [row.position, Number(row.player_count)]));
-  [...select.options].forEach(option => {
-    if (!option.value) return;
-    const count = counts[option.value] || 0;
-    const limit = limits[option.value];
-    option.dataset.originalLabel ||= option.textContent;
-    option.disabled = count >= limit;
-    option.textContent = `${option.dataset.originalLabel} — ${count >= limit ? (isSpanish ? 'OCUPADO' : 'TAKEN') : `${limit - count} ${isSpanish ? 'disponible(s)' : 'available'}`}`;
-  });
-  select.disabled = false;
-  if (message) message.textContent = isSpanish
-    ? 'Por equipo: 1 portero, 2 defensas, 2 mediocampistas y 1 delantero.'
-    : 'Per team: 1 goalkeeper, 2 defenders, 2 midfielders, and 1 striker.';
-}
-async function loadRemoteContent() {
-  const { data, error } = await tournamentDb.from('site_content').select('content_key, content_value');
-  if (error || !data) return;
-  const values = Object.fromEntries(data.map(row => [row.content_key, row.content_value]));
-  if (rulesContent) rulesContent.innerHTML = values.rules?.trim() ? `<ol>${values.rules.split('\n').filter(Boolean).map(rule => `<li>${escapeHtml(rule)}</li>`).join('')}</ol>` : `<p>${isSpanish ? 'Los organizadores publicarán las reglas pronto.' : 'Rules will be posted by the organizers soon.'}</p>`;
-  if (values.update && updatesContent) updatesContent.innerHTML = `<article><p class="date">${isSpanish ? 'PUBLICACIÓN DEL ORGANIZADOR' : 'ORGANIZER POST'}</p><h3>${escapeHtml(values.update)}</h3></article>`;
-  if (values.when && document.querySelector('#whenContent')) document.querySelector('#whenContent').innerHTML = escapeHtml(values.when).replace(/\n/g, '<br>');
-  if (values.where && document.querySelector('#whereContent')) document.querySelector('#whereContent').innerHTML = escapeHtml(values.where).replace(/\n/g, '<br>');
-}
-async function loadCommunityPosts() {
-  const container = document.querySelector('#communityPosts');
-  if (!container) return;
-  const { data, error } = await tournamentDb.from('community_posts').select('message, created_at').order('created_at', { ascending: false });
-  if (error || !data) return;
-  container.innerHTML = data.length ? data.map(post => `<article><p class="date">${isSpanish ? 'ACTUALIZACIÓN DE LA COMUNIDAD' : 'COMMUNITY UPDATE'}</p><h3>${escapeHtml(post.message)}</h3></article>`).join('') : `<p>${isSpanish ? 'Aún no hay publicaciones.' : 'No community posts yet.'}</p>`;
-}
-async function loadAnsweredQuestions() {
-  const container = document.querySelector('#answeredQuestions');
-  if (!container) return;
-  const { data, error } = await tournamentDb.rpc('public_answered_questions');
-  if (error || !data) return;
-  container.innerHTML = data.length ? data.map(item => `
-    <article class="public-answer">
-      <p><strong>${isSpanish ? 'PREGUNTA' : 'QUESTION'}:</strong> ${escapeHtml(item.question)}</p>
-      <p><strong>${isSpanish ? 'RESPUESTA' : 'ANSWER'}:</strong> ${escapeHtml(item.answer)}</p>
-    </article>`).join('') : `<p>${isSpanish ? 'Aún no hay respuestas.' : 'No answers yet.'}</p>`;
-}
-async function showRegistrations() {
-  const { data: registrations, error } = await tournamentDb.from('registrations').select('player_name, player_age, team, paid, created_at').order('created_at', { ascending: false });
-  if (error) return;
-  const count = document.querySelector('#registrationCount');
-  const total = document.querySelector('#moneyTotal');
-  const list = document.querySelector('#registrationList');
-  if (count) count.textContent = registrations.length;
-  if (total) total.textContent = `$${registrations.length * 5}`;
-  if (list) list.innerHTML = registrations.length
-    ? registrations.map(player => `<p><strong>${escapeHtml(player.player_name)}</strong> · ${escapeHtml(player.team)} · age ${escapeHtml(player.player_age)}</p>`).join('')
-    : 'No registrations yet.';
-}
-displayContent();
-loadRemoteContent();
-loadCommunityPosts();
-loadAnsweredQuestions();
-loadTeamAvailability();
-
-async function showOrganizerLink() {
-  const link = document.querySelector('#organizerLink');
-  if (!link) return;
-  const { data: { session } } = await tournamentDb.auth.getSession();
-  link.hidden = !session || !organizerEmails.includes((session.user.email || '').toLowerCase());
-}
-showOrganizerLink();
-tournamentDb.auth.onAuthStateChange(() => showOrganizerLink());
-
-document.querySelector('#registrationForm')?.addEventListener('submit', async (event) => {
+['dragenter', 'dragover'].forEach(type => dropZone.addEventListener(type, event => {
   event.preventDefault();
-  const form = new FormData(event.currentTarget);
-  const playerName = form.get('playerName').trim();
-  if (!validRealName(playerName)) {
-    alert(isSpanish
-      ? 'Escribe tu nombre y apellido reales. No se permiten apodos, nombres falsos ni palabras inapropiadas.'
-      : 'Enter your real first and last name. Nicknames, fake names, and inappropriate words are not allowed.');
+  dropZone.classList.add('is-dragging');
+}));
+['dragleave', 'drop'].forEach(type => dropZone.addEventListener(type, event => {
+  event.preventDefault();
+  dropZone.classList.remove('is-dragging');
+}));
+dropZone.addEventListener('drop', event => selectFile(event.dataTransfer.files[0]));
+fileInput.addEventListener('change', () => selectFile(fileInput.files[0]));
+processButton.addEventListener('click', processAudio);
+
+function selectFile(file) {
+  if (!file) return;
+  if (!file.type.startsWith('audio/') && !/\.(mp3|wav|m4a|aac|ogg)$/i.test(file.name)) {
+    alert('Please choose an MP3, WAV, M4A, AAC, or OGG audio file.');
     return;
   }
-  if (!form.get('lockedPosition')) {
-    alert(isSpanish ? 'Elige una posición disponible.' : 'Choose an available position.');
-    return;
-  }
-  const testMode = window.tournamentTestModeActive && window.tournamentTesterCode;
-  const result = testMode
-    ? await tournamentDb.rpc('submit_test_registration', {
-      check_code: window.tournamentTesterCode,
-      test_name: playerName,
-      test_email: `tester-${Date.now()}@example.test`,
-      test_age: Number(form.get('age')),
-      test_team: form.get('lockedTeam'),
-      test_position: form.get('lockedPosition')
-    })
-    : await tournamentDb.rpc('submit_cash_app_registration', {
-      p_player_name: playerName,
-      p_player_age: Number(form.get('age')),
-      p_position: form.get('lockedPosition'),
-      p_team: form.get('lockedTeam'),
-      p_payment_reference: String(form.get('paymentReference') || '').trim(),
-      p_submission_token: submissionToken(),
-      p_honeypot: String(form.get('website') || ''),
-      p_form_elapsed_ms: Date.now() - registrationFormStartedAt
-    });
-  const { error } = result;
-  if (error) {
-    const errorMessage = error.message || '';
-    if (errorMessage.includes('SUBMISSION_RATE_LIMIT')) {
-      alert(isSpanish ? 'Demasiados intentos. Espera una hora antes de intentarlo de nuevo.' : 'Too many attempts. Wait one hour before trying again.');
-    } else if (errorMessage.includes('PAYMENT_REFERENCE_USED')) {
-      alert(isSpanish ? 'Esta confirmación de pago ya fue utilizada.' : 'This payment confirmation was already used.');
-    } else if (errorMessage.includes('BOT_DETECTED')) {
-      alert(isSpanish ? 'No se pudo verificar el formulario. Recarga la página e inténtalo de nuevo.' : 'The form could not be verified. Reload the page and try again.');
-    } else if (errorMessage.includes('TEAM_FULL')) {
-      alert(isSpanish
-        ? 'Ese equipo ya tiene 6 jugadores. Recarga la página y elige otro equipo.'
-        : 'That team already has 6 players. Please reload and choose another team.');
-    } else if (errorMessage.includes('POSITION_FULL')) {
-      alert(isSpanish
-        ? 'Esa posición ya está ocupada en este equipo. Recarga la página y elige otra posición.'
-        : 'That position is already taken for this team. Reload and choose another position.');
-    } else if (errorMessage.includes('INVALID_REAL_NAME')) {
-      alert(isSpanish
-        ? 'Usa tu nombre y apellido reales. No se permiten apodos, nombres falsos ni palabras inapropiadas.'
-        : 'Use your real first and last name. Nicknames, fake names, and inappropriate words are not allowed.');
-    } else {
-      alert(isSpanish
-        ? 'No se pudo guardar el registro. Inténtalo de nuevo.'
-        : 'Registration could not be saved yet. Please try again.');
+  selectedFile = file;
+  document.querySelector('#fileName').textContent = file.name;
+  document.querySelector('#fileDetails').textContent = `${formatBytes(file.size)} · Ready to process`;
+  dropZone.hidden = true;
+  filePanel.hidden = false;
+  processingPanel.hidden = true;
+  resultsPanel.hidden = true;
+}
+
+function resetStudio() {
+  if (activeAudio) activeAudio.pause();
+  objectUrls.forEach(URL.revokeObjectURL);
+  objectUrls = [];
+  selectedFile = null;
+  activeAudio = null;
+  fileInput.value = '';
+  rightsCheck.checked = false;
+  processButton.disabled = true;
+  trackList.innerHTML = '';
+  dropZone.hidden = false;
+  filePanel.hidden = true;
+  processingPanel.hidden = true;
+  resultsPanel.hidden = true;
+}
+
+async function processAudio() {
+  if (!selectedFile || !rightsCheck.checked) return;
+  filePanel.hidden = true;
+  processingPanel.hidden = false;
+  setProgress(8, 'Reading your audio');
+
+  try {
+    const bytes = await selectedFile.arrayBuffer();
+    const AudioContextClass = window.AudioContext || window.webkitAudioContext;
+    const context = new AudioContextClass();
+    setProgress(22, 'Decoding the song');
+    const buffer = await context.decodeAudioData(bytes.slice(0));
+
+    if (buffer.duration > 600) throw new Error('Please use a song that is 10 minutes or shorter.');
+    setProgress(42, 'Analyzing the stereo mix');
+    await nextFrame();
+
+    const left = buffer.getChannelData(0);
+    const right = buffer.numberOfChannels > 1 ? buffer.getChannelData(1) : left;
+    const sampleRate = buffer.sampleRate;
+    const karaokeLeft = new Float32Array(left.length);
+    const karaokeRight = new Float32Array(left.length);
+    const vocalLeft = new Float32Array(left.length);
+    const vocalRight = new Float32Array(left.length);
+    const backingLeft = new Float32Array(left.length);
+    const backingRight = new Float32Array(left.length);
+
+    for (let i = 0; i < left.length; i++) {
+      const mid = (left[i] + right[i]) * 0.5;
+      const side = (left[i] - right[i]) * 0.5;
+      const center = mid - side * 0.12;
+      karaokeLeft[i] = softLimit(side * 1.35);
+      karaokeRight[i] = softLimit(-side * 1.35);
+      vocalLeft[i] = softLimit(center);
+      vocalRight[i] = softLimit(center);
+      backingLeft[i] = softLimit(side * 1.55);
+      backingRight[i] = softLimit(-side * 1.55);
     }
-    await loadTeamAvailability();
-    return;
+
+    setProgress(68, 'Building your three mixes');
+    await nextFrame();
+    const baseName = selectedFile.name.replace(/\.[^.]+$/, '') || 'karaokelab';
+    const tracks = [
+      makeTrack('Karaoke mix', 'Center-vocal reduced', `${baseName}-karaoke.wav`, karaokeLeft, karaokeRight, sampleRate),
+      makeTrack('Vocal focus', 'Main vocal and center audio', `${baseName}-vocals.wav`, vocalLeft, vocalRight, sampleRate),
+      makeTrack('Backing-vocal focus', 'Experimental side-vocal mix', `${baseName}-backing-vocals.wav`, backingLeft, backingRight, sampleRate)
+    ];
+    setProgress(92, 'Preparing downloads');
+    renderTracks(tracks);
+    await context.close();
+    setProgress(100, 'Complete');
+    await new Promise(resolve => setTimeout(resolve, 350));
+    processingPanel.hidden = true;
+    resultsPanel.hidden = false;
+  } catch (error) {
+    processingPanel.hidden = true;
+    filePanel.hidden = false;
+    alert(error.message || 'This audio could not be processed. Try another file or format.');
   }
-  if (testMode) {
-    currentPublicTestRegistrationId = result.data;
-    paymentDialog.querySelector('h2').textContent = isSpanish ? 'PAGO DE PRUEBA' : 'TEST PAYMENT';
-    paymentDialog.querySelector('p').textContent = isSpanish ? 'Simula un pago de $5. No se cobrará dinero real.' : 'Simulate a $5 payment. No real money will be charged.';
-    const paymentLink = paymentDialog.querySelector('a');
-    paymentLink.textContent = isSpanish ? 'Simular pago exitoso →' : 'Simulate successful payment →';
-    paymentLink.removeAttribute('target');
-  }
-  if (!testMode) event.currentTarget.reset();
-  paymentDialog.showModal();
-});
-paymentDialog?.querySelector('a')?.addEventListener('click', async event => {
-  if (!window.tournamentTestModeActive || !currentPublicTestRegistrationId) return;
-  event.preventDefault();
-  const { error } = await tournamentDb.rpc('simulate_test_payment', { check_code: window.tournamentTesterCode, registration_id: currentPublicTestRegistrationId });
-  window.alert(error ? 'Test payment simulation failed.' : 'Test payment succeeded. No real money was charged.');
-});
-document.querySelector('#teamSelect')?.addEventListener('change', async (event) => {
-  const newTeamField = document.querySelector('#newTeamField');
-  const newTeamInput = newTeamField?.querySelector('input');
-  if (newTeamField) newTeamField.hidden = event.target.value !== 'new';
-  if (newTeamInput) newTeamInput.required = event.target.value === 'new';
-  document.querySelector('#lockedTeam').value = event.target.value;
-  const position = document.querySelector('#positionSelect');
-  if (position) {
-    position.disabled = true;
-    position.selectedIndex = 0;
-  }
-  document.querySelector('#lockedPosition').value = '';
-  await loadPositionAvailability(event.target.value);
-});
-document.querySelector('#positionSelect')?.addEventListener('change', (event) => {
-  document.querySelector('#lockedPosition').value = event.target.value;
-});
-document.querySelector('#questionForm')?.addEventListener('submit', async (event) => {
-  event.preventDefault();
-  const form = new FormData(event.currentTarget);
-  const senderName = String(form.get('questionName') || '').trim();
-  const question = String(form.get('questionMessage') || '').trim();
-  const status = document.querySelector('#questionMessage');
-  if (!validRealName(senderName)) { status.textContent = isSpanish ? 'Usa tu nombre y apellido reales, sin apodos ni palabras inapropiadas.' : 'Use your real first and last name, without nicknames or inappropriate words.'; return; }
-  if (question.length < 5) { status.textContent = isSpanish ? 'Escribe una pregunta completa.' : 'Please enter a complete question.'; return; }
-  if (window.tournamentTestModeActive && window.tournamentTesterCode) {
-    event.currentTarget.reset();
-    status.textContent = isSpanish ? 'Pregunta de prueba simulada. No se publicó.' : 'Test question simulated. Nothing was published.';
-    return;
-  }
-  const { error } = await tournamentDb.rpc('submit_player_question', {
-    p_sender_name: senderName,
-    p_question: question,
-    p_submission_token: submissionToken()
+}
+
+function makeTrack(title, description, filename, left, right, sampleRate) {
+  const blob = encodeWav(left, right, sampleRate);
+  const url = URL.createObjectURL(blob);
+  objectUrls.push(url);
+  return { title, description, filename, url };
+}
+
+function renderTracks(tracks) {
+  trackList.innerHTML = tracks.map((track, index) => `
+    <article class="track">
+      <button class="play" type="button" data-play="${index}" aria-label="Play ${escapeHtml(track.title)}">▶</button>
+      <div class="track-info"><strong>${escapeHtml(track.title)}</strong><span>${escapeHtml(track.description)}</span></div>
+      <a class="download" href="${track.url}" download="${escapeHtml(track.filename)}">Download WAV</a>
+      <audio src="${track.url}" preload="metadata"></audio>
+    </article>
+  `).join('');
+
+  trackList.querySelectorAll('[data-play]').forEach(button => {
+    button.addEventListener('click', () => {
+      const audio = button.closest('.track').querySelector('audio');
+      if (activeAudio && activeAudio !== audio) {
+        activeAudio.pause();
+        activeAudio.closest('.track').querySelector('.play').textContent = '▶';
+      }
+      if (audio.paused) {
+        audio.play();
+        button.textContent = 'Ⅱ';
+        activeAudio = audio;
+      } else {
+        audio.pause();
+        button.textContent = '▶';
+      }
+      audio.onended = () => { button.textContent = '▶'; };
+    });
   });
-  if (error) { status.textContent = isSpanish ? 'No se pudo enviar tu pregunta. Inténtalo de nuevo.' : 'Your question could not be sent. Please try again.'; return; }
-  event.currentTarget.reset();
-  status.textContent = isSpanish ? 'Tu pregunta fue enviada a los organizadores.' : 'Your question was sent to the organizers.';
-});
-window.addEventListener('tournament-test-ready', () => {
-  loadTeamAvailability();
-  if (document.querySelector('#teamSelect')?.value) loadPositionAvailability(document.querySelector('#teamSelect').value);
-});
-document.querySelector('#adminButton')?.addEventListener('click', () => adminDialog.showModal());
-document.querySelectorAll('[data-close]').forEach(button => button.addEventListener('click', () => document.querySelector(`#${button.dataset.close}`).close()));
-document.querySelector('#loginButton')?.addEventListener('click', async () => {
-  const email = document.querySelector('#adminEmail').value.trim().toLowerCase();
-  const message = document.querySelector('#loginMessage');
-  if (!email || !email.includes('@')) { message.textContent = 'Please enter a valid email address.'; return; }
-  if (!organizerEmails.includes(email)) { message.textContent = 'This email is not an organizer account.'; return; }
-  const { data: { session } } = await tournamentDb.auth.getSession();
-  if (!session || session.user.email !== email) {
-    const { error } = await tournamentDb.auth.signInWithOtp({ email, options: { emailRedirectTo: window.location.href } });
-    message.textContent = error ? 'Could not send the sign-in email. Please try again.' : 'Check your email and open the sign-in link, then return here.';
-    return;
+}
+
+function encodeWav(left, right, sampleRate) {
+  const frames = Math.min(left.length, right.length);
+  const output = new ArrayBuffer(44 + frames * 4);
+  const view = new DataView(output);
+  writeText(view, 0, 'RIFF');
+  view.setUint32(4, 36 + frames * 4, true);
+  writeText(view, 8, 'WAVE');
+  writeText(view, 12, 'fmt ');
+  view.setUint32(16, 16, true);
+  view.setUint16(20, 1, true);
+  view.setUint16(22, 2, true);
+  view.setUint32(24, sampleRate, true);
+  view.setUint32(28, sampleRate * 4, true);
+  view.setUint16(32, 4, true);
+  view.setUint16(34, 16, true);
+  writeText(view, 36, 'data');
+  view.setUint32(40, frames * 4, true);
+  let offset = 44;
+  for (let i = 0; i < frames; i++) {
+    view.setInt16(offset, floatToPcm(left[i]), true);
+    view.setInt16(offset + 2, floatToPcm(right[i]), true);
+    offset += 4;
   }
-  document.querySelector('#editor').hidden = false;
-  message.textContent = '';
-  const { data } = await tournamentDb.from('site_content').select('content_key, content_value');
-  const values = Object.fromEntries((data || []).map(row => [row.content_key, row.content_value]));
-  document.querySelector('#rulesEditor').value = values.rules || '';
-  document.querySelector('#updateEditor').value = values.update || '';
-  document.querySelector('#whenEditor').value = values.when || '';
-  document.querySelector('#whereEditor').value = values.where || '';
-  await showRegistrations();
-});
-document.querySelector('#saveButton')?.addEventListener('click', async () => {
-  const changes = [
-    ['rules', document.querySelector('#rulesEditor').value], ['update', document.querySelector('#updateEditor').value],
-    ['when', document.querySelector('#whenEditor').value], ['where', document.querySelector('#whereEditor').value]
-  ];
-  const results = await Promise.all(changes.map(([content_key, content_value]) => tournamentDb.from('site_content').update({ content_value }).eq('content_key', content_key)));
-  if (results.some(result => result.error)) { alert('Changes could not be saved. Please try again.'); return; }
-  await loadRemoteContent(); adminDialog.close();
-});
+  return new Blob([view], { type: 'audio/wav' });
+}
+
+function writeText(view, offset, text) {
+  for (let i = 0; i < text.length; i++) view.setUint8(offset + i, text.charCodeAt(i));
+}
+function floatToPcm(value) {
+  const clipped = Math.max(-1, Math.min(1, value));
+  return clipped < 0 ? clipped * 0x8000 : clipped * 0x7fff;
+}
+function softLimit(value) {
+  return Math.tanh(value * 1.08);
+}
+function setProgress(percent, text) {
+  progressBar.style.width = `${percent}%`;
+  progressText.textContent = text;
+}
+function nextFrame() {
+  return new Promise(resolve => requestAnimationFrame(() => setTimeout(resolve, 20)));
+}
+function formatBytes(bytes) {
+  if (bytes < 1024 * 1024) return `${Math.max(1, Math.round(bytes / 1024))} KB`;
+  return `${(bytes / (1024 * 1024)).toFixed(1)} MB`;
+}
+function escapeHtml(value) {
+  return String(value).replace(/[&<>"']/g, char => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#039;'}[char]));
+}

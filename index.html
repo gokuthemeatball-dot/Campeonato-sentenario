@@ -1,38 +1,146 @@
 <!doctype html>
 <html lang="en">
-  <head>
-    <meta charset="UTF-8" />
-    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>Centennial Championship | Football Tournament</title>
-    <meta name="description" content="Register for the Campeonato Centenario football tournament." />
-    <link rel="preconnect" href="https://fonts.googleapis.com" />
-    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
-    <link href="https://fonts.googleapis.com/css2?family=Barlow+Condensed:wght@600;700;800&family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet" />
-    <link rel="stylesheet" href="style.css" /><link rel="stylesheet" href="admin.css" /><link rel="stylesheet" href="public-layout.css" /><link rel="stylesheet" href="mobile-organizer.css" /><link rel="stylesheet" href="feature-controls.css" />
-  </head>
-  <body>
-    <header class="hero" id="home">
-      <nav class="nav"><a class="brand" href="#home">CENTENNIAL <span>CHAMPIONSHIP</span></a><a href="#registration">Registration</a><a href="#posts">Posts</a><a href="#rules">Rules</a><a id="organizerLink" href="admin.html" hidden>Organizer Desk</a><button class="admin-link" id="languageButton">Español</button></nav>
-      <div class="hero-content"><p class="eyebrow">Football tournament</p><h1>CENTENNIAL<br /><em>CHAMPIONSHIP</em></h1><p class="lead">Register to play, read posts, and check the tournament rules.</p><a class="button button-primary" href="#registration">Register <span>→</span></a></div>
-      <div class="ball" aria-hidden="true">⚽</div>
-    </header>
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <meta name="theme-color" content="#0b0b10" />
+  <meta name="description" content="Create free karaoke, vocal-focus, and backing-vocal tracks privately in your browser." />
+  <title>KaraokeLab — Make your song sing differently</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;600;700&family=Manrope:wght@600;700;800&display=swap" rel="stylesheet" />
+  <link rel="stylesheet" href="style.css?v=20" />
+</head>
+<body>
+  <header class="site-header">
+    <a class="brand" href="#" aria-label="KaraokeLab home">
+      <span class="brand-mark" aria-hidden="true"><i></i><i></i><i></i><i></i></span>
+      <span>Karaoke<span>Lab</span></span>
+    </a>
+    <nav aria-label="Main navigation">
+      <a href="#studio">Studio</a>
+      <a href="#how">How it works</a>
+      <a href="#privacy">Privacy</a>
+    </nav>
+    <a class="header-button" href="#studio">Make karaoke</a>
+  </header>
 
-    <main>
-      <section class="public-section registration-callout" id="registration"><p class="eyebrow">Players age 14 and older</p><h2>REGISTRATION</h2><p>Choose your national team and playing position, then pay $5 to register.</p><a class="button button-primary" href="registration.html">Register now <span>→</span></a></section>
+  <main>
+    <section class="hero">
+      <div class="hero-copy">
+        <p class="eyebrow"><span></span> Free · private · no account</p>
+        <h1>Turn any song into <em>your stage.</em></h1>
+        <p class="hero-lede">Upload a song and create a karaoke mix, a vocal-focus track, and an experimental backing-vocal track—right on your device.</p>
+        <div class="hero-actions">
+          <a class="primary-button" href="#studio">Upload your song <span>↗</span></a>
+          <a class="text-link" href="#how">See how it works <span>↓</span></a>
+        </div>
+        <div class="trust-row">
+          <span><b>100%</b> free</span>
+          <span><b>0</b> uploads to us</span>
+          <span><b>3</b> downloadable mixes</span>
+        </div>
+      </div>
+      <div class="hero-art" aria-hidden="true">
+        <div class="orbit orbit-one"></div>
+        <div class="orbit orbit-two"></div>
+        <div class="record">
+          <div class="record-lines"></div>
+          <div class="record-label"><span>KL</span><small>YOUR MIX</small></div>
+        </div>
+        <div class="sound-pill pill-one"><span></span><span></span><span></span><span></span><span></span></div>
+        <div class="sound-pill pill-two"><span></span><span></span><span></span><span></span></div>
+      </div>
+    </section>
 
-      <section class="public-section updates" id="posts"><p class="eyebrow">News from the organizers</p><h2>POSTS</h2><div id="updatesContent"><p>No posts yet.</p></div><div id="communityPosts"></div></section>
+    <section class="studio-section" id="studio">
+      <div class="section-heading">
+        <p class="eyebrow"><span></span> Browser studio</p>
+        <h2>Drop a track.<br />Get three new ways to sing.</h2>
+        <p>MP3, WAV, M4A, AAC, or OGG. For the best result, use a stereo studio recording.</p>
+      </div>
 
-      <section class="public-section tournament-info" id="rules"><p class="eyebrow">Read before playing</p><h2>RULES</h2><div id="rulesSection"><div id="rulesContent"><p>Rules will be posted by the organizers soon.</p></div></div></section>
+      <div class="studio-card">
+        <div class="drop-zone" id="dropZone">
+          <input id="audioFile" type="file" accept="audio/*,.mp3,.wav,.m4a,.aac,.ogg" />
+          <div class="upload-icon" aria-hidden="true">↑</div>
+          <h3>Drop your song here</h3>
+          <p>or choose a file from your device</p>
+          <button class="choose-button" id="chooseFile" type="button">Choose audio file</button>
+          <small>Maximum recommended length: 10 minutes</small>
+        </div>
 
-      <section class="public-section questions" id="questions"><p class="eyebrow">Ask the organizers</p><h2>QUESTIONS</h2><p>Send a question to the tournament organizers.</p><form id="questionForm"><label>Your full name<input required name="questionName" maxlength="80" autocomplete="name" /></label><label>Your question<textarea required name="questionMessage" rows="5" maxlength="1000"></textarea></label><button class="button button-primary" type="submit">Send question <span>→</span></button><p class="message" id="questionMessage" role="status"></p></form><div class="answered-questions"><h3>ANSWERED QUESTIONS</h3><div id="answeredQuestions"><p>No answers yet.</p></div></div></section>
-    </main>
+        <div class="file-panel" id="filePanel" hidden>
+          <div class="file-summary">
+            <div class="file-icon">♫</div>
+            <div>
+              <strong id="fileName">song.mp3</strong>
+              <span id="fileDetails">Ready to process</span>
+            </div>
+            <button id="removeFile" class="icon-button" type="button" aria-label="Remove file">×</button>
+          </div>
+          <div class="notice">
+            <strong>Your song stays private.</strong>
+            <span>Processing happens inside this browser. KaraokeLab does not receive or store your audio.</span>
+          </div>
+          <label class="rights-check">
+            <input id="rightsCheck" type="checkbox" />
+            <span>I own this audio or have permission to process it.</span>
+          </label>
+          <button class="process-button" id="processButton" type="button" disabled>
+            Create my tracks <span>→</span>
+          </button>
+        </div>
 
-    <footer><span>CENTENNIAL CHAMPIONSHIP</span><p>Questions? Contact the tournament organizers.</p></footer>
+        <div class="processing-panel" id="processingPanel" hidden>
+          <div class="spinner" aria-hidden="true"></div>
+          <h3>Separating your song…</h3>
+          <p id="progressText">Reading audio</p>
+          <div class="progress-track"><span id="progressBar"></span></div>
+          <small>Keep this tab open. Longer songs may take a minute.</small>
+        </div>
 
-    <dialog id="paymentDialog"><button class="close" data-close="paymentDialog" aria-label="Close">×</button><p class="eyebrow">One last step</p><h2>PAY YOUR ENTRY FEE</h2><p>Open the secure Cash App request to pay <strong>$5 per player</strong>.</p><a class="button button-primary" id="cashAppLink" href="https://cash.app/pay/link/7huvq98i" target="_blank" rel="noreferrer">Pay $5 with Cash App <span>→</span></a></dialog>
+        <div class="results-panel" id="resultsPanel" hidden>
+          <div class="results-title">
+            <div>
+              <p class="eyebrow"><span></span> Your tracks are ready</p>
+              <h3>Pick your mix</h3>
+            </div>
+            <button id="startOver" class="secondary-button" type="button">New song</button>
+          </div>
+          <div class="track-list" id="trackList"></div>
+          <p class="result-note">Backing-vocal focus is experimental and may also contain instruments. Results depend on the original stereo mix.</p>
+        </div>
+      </div>
+    </section>
 
-    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
-    <script src="supabase.js?v=6"></script>
-    <script src="test-gate.js?v=3"></script><script src="script.js?v=13"></script>
-  </body>
+    <section class="how-section" id="how">
+      <div class="section-heading compact">
+        <p class="eyebrow"><span></span> Simple by design</p>
+        <h2>From full mix to<br />karaoke in three steps.</h2>
+      </div>
+      <div class="steps">
+        <article><span>01</span><div class="step-icon">↥</div><h3>Upload</h3><p>Choose a song you own or have permission to use.</p></article>
+        <article><span>02</span><div class="step-icon">≋</div><h3>Separate</h3><p>Your browser analyzes the stereo channels locally.</p></article>
+        <article><span>03</span><div class="step-icon">↓</div><h3>Download</h3><p>Preview and save any of your three new mixes.</p></article>
+      </div>
+    </section>
+
+    <section class="privacy-section" id="privacy">
+      <div>
+        <p class="eyebrow light"><span></span> Privacy first</p>
+        <h2>Your music never<br />leaves your device.</h2>
+      </div>
+      <p>KaraokeLab processes your audio in the browser. We do not upload, save, sell, or listen to your files. Close the page and the temporary results disappear.</p>
+    </section>
+  </main>
+
+  <footer>
+    <a class="brand" href="#"><span class="brand-mark" aria-hidden="true"><i></i><i></i><i></i><i></i></span><span>Karaoke<span>Lab</span></span></a>
+    <p>Make it yours. Sing it your way.</p>
+    <small>Only process audio you own or have permission to use.</small>
+  </footer>
+
+  <script src="script.js?v=20"></script>
+</body>
 </html>
