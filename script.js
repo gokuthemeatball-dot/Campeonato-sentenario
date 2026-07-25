@@ -85,20 +85,18 @@ async function processAudio() {
     const sampleRate = buffer.sampleRate;
     const karaokeLeft = new Float32Array(left.length);
     const karaokeRight = new Float32Array(left.length);
-    const vocalLeft = new Float32Array(left.length);
-    const vocalRight = new Float32Array(left.length);
     const backingLeft = new Float32Array(left.length);
     const backingRight = new Float32Array(left.length);
 
     // Frequency-aware mid/side separation. Removing the filtered center from
     // each original channel keeps the stereo field instead of collapsing the
     // instrumental to a phase-cancelled mono-like result.
-    const centerHighPass = createBiquad('highpass', 165, sampleRate, 0.707);
-    const centerLowPass = createBiquad('lowpass', 9000, sampleRate, 0.707);
+    const centerHighPass = createBiquad('highpass', 140, sampleRate, 0.707);
+    const centerLowPass = createBiquad('lowpass', 10500, sampleRate, 0.707);
     const sideHighPass = createBiquad('highpass', 120, sampleRate, 0.707);
     const sideLowPass = createBiquad('lowpass', 12000, sampleRate, 0.707);
     const blockSize = 2048;
-    let removalStrength = 0.58;
+    let removalStrength = 0.7;
     let fastEnvelope = 0;
     let slowEnvelope = 0;
     let previousMid = 0;
@@ -107,8 +105,8 @@ async function processAudio() {
       const blockEnd = Math.min(left.length, blockStart + blockSize);
       const correlation = stereoCorrelation(left, right, blockStart, blockEnd);
       const targetStrength = buffer.numberOfChannels > 1
-        ? clamp(0.43 + Math.max(0, correlation) * 0.22, 0.43, 0.65)
-        : 0.5;
+        ? clamp(0.61 + Math.max(0, correlation) * 0.21, 0.61, 0.82)
+        : 0.68;
 
       for (let i = blockStart; i < blockEnd; i++) {
         removalStrength += (targetStrength - removalStrength) * 0.0025;
@@ -124,7 +122,7 @@ async function processAudio() {
         const transientProtection = clamp(
           (fastEnvelope - slowEnvelope) * 7 + attack * 2.2,
           0,
-          0.42
+          0.32
         );
         const centerToRemove = centerVocalBand * removalStrength * (1 - transientProtection);
 
@@ -133,25 +131,20 @@ async function processAudio() {
         karaokeLeft[i] = softLimit((left[i] - centerToRemove) * 1.015);
         karaokeRight[i] = softLimit((right[i] - centerToRemove) * 1.015);
 
-        // Keep a small amount of width around the centered lead vocal so the
-        // vocal mix sounds natural on headphones instead of dual-mono.
-        vocalLeft[i] = softLimit(centerVocalBand + wideVocalBand * 0.12);
-        vocalRight[i] = softLimit(centerVocalBand - wideVocalBand * 0.12);
-
-        // Backing vocals are often panned wider than the lead. This focuses
-        // that side information while maintaining its true stereo direction.
-        backingLeft[i] = softLimit(wideVocalBand * 1.6 + centerVocalBand * 0.07);
-        backingRight[i] = softLimit(-wideVocalBand * 1.6 + centerVocalBand * 0.07);
+        // Backing vocals are often wider than the lead. Blend the focused side
+        // band with a quiet copy of each original channel so the output keeps
+        // the recording's natural L/R placement instead of becoming anti-phase.
+        backingLeft[i] = softLimit(wideVocalBand * 1.3 + left[i] * 0.16);
+        backingRight[i] = softLimit(-wideVocalBand * 1.3 + right[i] * 0.16);
       }
     }
 
-    setProgress(68, 'Building your three mixes');
+    setProgress(68, 'Building your two mixes');
     await nextFrame();
     const baseName = selectedFile.name.replace(/\.[^.]+$/, '') || 'karaokelab';
     const tracks = [
-      makeTrack('Producer-preserve instrumental', 'Instruments and stereo image prioritized', `${baseName}-producer-instrumental.wav`, karaokeLeft, karaokeRight, sampleRate),
-      makeTrack('Main vocal focus', 'Centered vocal · natural stereo ambience', `${baseName}-main-vocals.wav`, vocalLeft, vocalRight, sampleRate),
-      makeTrack('Backing-vocal focus', 'Experimental wide-vocal stereo mix', `${baseName}-backing-vocals.wav`, backingLeft, backingRight, sampleRate)
+      makeTrack('Stereo instrumental', 'Stronger lead-vocal reduction · stereo preserved', `${baseName}-stereo-instrumental.wav`, karaokeLeft, karaokeRight, sampleRate),
+      makeTrack('Stereo backing-vocal focus', 'Experimental wide-vocal mix · natural L/R placement', `${baseName}-backing-vocals.wav`, backingLeft, backingRight, sampleRate)
     ];
     setProgress(92, 'Preparing downloads');
     renderTracks(tracks);
