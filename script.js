@@ -236,8 +236,17 @@ function applyLanguage(){
   const es=language==='es';
   document.querySelector('#accessTitle').textContent=es?'Visual, audio o ambos':'Visual, audio, or both';
   document.querySelector('#startButton').innerHTML=es?'INICIAR JUEGO <span>→</span>':'START GAME <span>→</span>';
+  document.querySelector('#startAccessButton').textContent=es?'ACCESIBILIDAD':'ACCESSIBILITY';
   document.querySelector('#accessButton').textContent=es?'Accesibilidad':'Accessibility';
   document.querySelector('#helpButton').textContent=es?'Controles':'Controls';
+  document.querySelector('#startDescription').textContent=es?'Un turno nocturno de limpieza aparentemente normal. No hay compañeros, y el gerente nunca parece irse.':'A routine overnight sanitation shift. No customers, no coworkers, and one manager who never seems to leave.';
+  document.querySelector('#audienceNote').textContent=es?'Creado para todos. Juega con imágenes, sonido o ambos; todos reciben la misma historia, objetivos y dificultad.':'Built for every player. Play visually, through sound, or with both—every objective, threat, and interaction remains available.';
+  document.querySelector('#headphonesNote').textContent=es?'Se recomiendan auriculares para el audio espacial. La narración es opcional.':'Headphones recommended for spatial audio. Narration is optional.';
+  document.querySelector('#narrationLabel').textContent=es?'Mensajes hablados del juego':'Spoken game updates';
+  document.querySelector('#soundLabel').textContent=es?'Sonidos espaciales y música':'Spatial sounds and music';
+  document.querySelector('#contrastLabel').textContent=es?'Contraste extra alto':'Extra-high contrast';
+  document.querySelector('#gestureModeLabel').textContent=es?'Modo de gestos móvil para jugadores ciegos y navegación hablada frecuente':'Blind mobile gesture mode and frequent spoken navigation';
+  document.querySelector('#languageLabel').textContent=es?'Idioma':'Language';
   document.querySelector('#gestureTitle').textContent=es?'MODO DE GESTOS':'GESTURE MODE';
   document.querySelector('#gestureHint').textContent=es?'Usa toda la pantalla como un solo control':'Use the whole screen as one controller';
   updateGestureItemStatus();
@@ -1389,6 +1398,7 @@ document.querySelector('#startButton').addEventListener('click',()=>{
 });
 document.querySelector('#restartButton').addEventListener('click',()=>{resetGame();startIntro();});
 document.querySelector('#accessButton').addEventListener('click',()=>{document.querySelector('#accessModal').hidden=false;});
+document.querySelector('#startAccessButton').addEventListener('click',()=>{document.querySelector('#accessModal').hidden=false;});
 document.querySelector('#closeAccessButton').addEventListener('click',()=>{blindMode=document.querySelector('#blindModeStart').checked;if(blindMode)narrationToggle.checked=true;document.body.classList.toggle('screen-reader-controls',blindMode);gestureControls.hidden=!blindMode;document.querySelector('#accessModal').hidden=true;announce(blindMode?(running?'Blind gesture mode active. Turn off VoiceOver or TalkBack now. Swipe and hold to move, double tap to interact, down then up to choose an item, and up then down to use it.':'Blind gesture mode selected. Start the game first, then turn off VoiceOver or TalkBack when instructed.'):'Standard control layout active.',true);(blindMode&&running?gesturePad:canvas).focus();});
 document.querySelector('#helpButton').addEventListener('click',()=>announce('Arrows move and turn. H crouches. E interacts. R eats food. B throws a stun bottle. M uses the map. N deploys a noise lure. X fires the flash camera. V places a door jammer. Z uses the scent mask. F toggles the flashlight. P pauses.',true));
 window.addEventListener('beforeinstallprompt',event=>{

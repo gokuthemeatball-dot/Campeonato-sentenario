@@ -17,7 +17,7 @@
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
   <link href="https://fonts.googleapis.com/css2?family=Barlow+Condensed:wght@600;700;800;900&family=IBM+Plex+Mono:wght@400;500;600&display=swap" rel="stylesheet" />
   <link rel="stylesheet" href="style.css?v=32" />
-  <link rel="stylesheet" href="horror-mobile.css?v=60" />
+  <link rel="stylesheet" href="horror-mobile.css?v=61" />
   <style>.inventory div{flex-wrap:wrap}.inventory{max-width:65%}</style>
 </head>
 <body>
@@ -140,10 +140,11 @@
       <img class="start-art" src="aisle13-keyart.jpg" alt="A dark abandoned supermarket aisle with Mr. Hollow standing beneath failing fluorescent lights." />
       <p class="kicker">NIGHT SHIFT</p>
       <h2 id="startTitle">AISLE 13</h2>
-      <p>A routine overnight sanitation shift. No customers, no coworkers, and one manager who never seems to leave.</p>
-      <p class="audience-note">Built for every player. Play visually, through sound, or with both—every objective, threat, and interaction remains available.</p>
+      <p id="startDescription">A routine overnight sanitation shift. No customers, no coworkers, and one manager who never seems to leave.</p>
+      <p id="audienceNote" class="audience-note">Built for every player. Play visually, through sound, or with both—every objective, threat, and interaction remains available.</p>
+      <button id="startAccessButton" type="button">ACCESSIBILITY</button>
       <button id="startButton" type="button">START GAME <span>→</span></button>
-      <small>Headphones recommended for spatial audio. Narration is optional.</small>
+      <small id="headphonesNote">Headphones recommended for spatial audio. Narration is optional.</small>
     </div>
   </div>
 
@@ -152,11 +153,11 @@
       <span class="label">PLAY OPTIONS</span>
       <h2 id="accessTitle">Visual, audio, or both</h2>
       <p>Sighted, blind, and low-vision players share the same story, map, objectives, and difficulty. Choose the information that works best for you.</p>
-      <label><input id="narrationToggle" type="checkbox" /> Spoken game updates</label>
-      <label><input id="soundToggle" type="checkbox" checked /> Spatial sounds and music</label>
-      <label><input id="contrastToggle" type="checkbox" /> Extra-high contrast</label>
-      <label><input id="blindModeStart" type="checkbox" /> Blind mobile gesture mode and frequent spoken navigation</label>
-      <label>Language
+      <label><input id="narrationToggle" type="checkbox" /> <span id="narrationLabel">Spoken game updates</span></label>
+      <label><input id="soundToggle" type="checkbox" checked /> <span id="soundLabel">Spatial sounds and music</span></label>
+      <label><input id="contrastToggle" type="checkbox" /> <span id="contrastLabel">Extra-high contrast</span></label>
+      <label><input id="blindModeStart" type="checkbox" /> <span id="gestureModeLabel">Blind mobile gesture mode and frequent spoken navigation</span></label>
+      <label><span id="languageLabel">Language</span>
         <select id="languageSelect">
           <option value="en">English</option>
           <option value="es">Español</option>
@@ -178,6 +179,6 @@
   </div>
 
   <p id="liveRegion" class="sr-only" aria-live="assertive" aria-atomic="true"></p>
-  <script src="script.js?v=60"></script>
+  <script src="script.js?v=61"></script>
 </body>
 </html>
