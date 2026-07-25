@@ -4,7 +4,7 @@
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1" />
   <meta name="theme-color" content="#080b0c" />
-  <meta name="description" content="Night Shift: Aisle 13 — an accessible audio-first supermarket survival horror game." />
+  <meta name="description" content="Night Shift: Aisle 13 — a supermarket survival-horror game for everyone, fully playable with or without sight." />
   <title>Night Shift: Aisle 13</title>
   <link rel="preconnect" href="https://fonts.googleapis.com" />
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
@@ -16,7 +16,7 @@
   <div class="noise" aria-hidden="true"></div>
   <header>
     <div class="wordmark"><span>NIGHT SHIFT</span><strong>AISLE 13</strong></div>
-    <p>HOLLOWAY FAMILY MARKET · EMPLOYEE TERMINAL</p>
+    <p>SURVIVAL HORROR · PLAYABLE WITH OR WITHOUT SIGHT</p>
     <button id="accessButton" type="button">Accessibility</button>
     <button id="helpButton" type="button">Controls</button>
   </header>
@@ -94,19 +94,21 @@
       <p class="kicker">NIGHT SHIFT</p>
       <h2 id="startTitle">AISLE 13</h2>
       <p>A routine overnight sanitation shift. No customers, no coworkers, and one manager who never seems to leave.</p>
+      <p class="audience-note">Built for every player. Play visually, through sound, or with both—every objective, threat, and interaction remains available.</p>
       <button id="startButton" type="button">START GAME <span>→</span></button>
-      <small>Headphones recommended.</small>
+      <small>Headphones recommended for spatial audio. Narration is optional.</small>
     </div>
   </div>
 
   <div class="modal" id="accessModal" role="dialog" aria-modal="true" aria-labelledby="accessTitle" hidden>
     <div class="modal-card access-card">
-      <span class="label">ACCESSIBILITY MENU</span>
-      <h2 id="accessTitle">Play your way</h2>
+      <span class="label">PLAY OPTIONS</span>
+      <h2 id="accessTitle">Visual, audio, or both</h2>
+      <p>Sighted, blind, and low-vision players share the same story, map, objectives, and difficulty. Choose the information that works best for you.</p>
       <label><input id="narrationToggle" type="checkbox" /> Spoken game updates</label>
       <label><input id="soundToggle" type="checkbox" checked /> Spatial sounds and music</label>
       <label><input id="contrastToggle" type="checkbox" /> Extra-high contrast</label>
-      <label><input id="blindModeStart" type="checkbox" /> Frequent spoken directions</label>
+      <label><input id="blindModeStart" type="checkbox" /> More frequent spoken navigation</label>
       <button id="compassButton" type="button">Audio compass <kbd>C</kbd></button>
       <button id="repeatButton" type="button">Repeat objective <kbd>Q</kbd></button>
       <button id="closeAccessButton" type="button">DONE <span>→</span></button>
@@ -123,6 +125,6 @@
   </div>
 
   <p id="liveRegion" class="sr-only" aria-live="assertive" aria-atomic="true"></p>
-  <script src="script.js?v=39"></script>
+  <script src="script.js?v=40"></script>
 </body>
 </html>
