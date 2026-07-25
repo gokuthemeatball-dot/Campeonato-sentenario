@@ -1190,6 +1190,8 @@ soundToggle.addEventListener('change',()=>{
 });
 document.querySelector('#startButton').addEventListener('click',()=>{
   blindMode=document.querySelector('#blindModeStart').checked;
+  if(blindMode)narrationToggle.checked=true;
+  document.body.classList.toggle('screen-reader-controls',blindMode);
   document.querySelector('#startModal').hidden=true;
   ensureAudio();primeDangerMusic();primeDeathMusic();primeLightsOutMusic();primeStoreTrack();primeExplorationTrack();resetGame();
   canvas.focus();
@@ -1198,7 +1200,7 @@ document.querySelector('#startButton').addEventListener('click',()=>{
 });
 document.querySelector('#restartButton').addEventListener('click',()=>{resetGame();startIntro();});
 document.querySelector('#accessButton').addEventListener('click',()=>{document.querySelector('#accessModal').hidden=false;});
-document.querySelector('#closeAccessButton').addEventListener('click',()=>{blindMode=document.querySelector('#blindModeStart').checked;document.querySelector('#accessModal').hidden=true;canvas.focus();});
+document.querySelector('#closeAccessButton').addEventListener('click',()=>{blindMode=document.querySelector('#blindModeStart').checked;if(blindMode)narrationToggle.checked=true;document.body.classList.toggle('screen-reader-controls',blindMode);document.querySelector('#accessModal').hidden=true;announce(blindMode?'Screen-reader controls active. Swipe left or right to choose a control, then double tap. Use Listen for direction and Repeat for your objective.':'Standard control layout active.',true);canvas.focus();});
 document.querySelector('#helpButton').addEventListener('click',()=>announce('Arrows move and turn. H crouches. E interacts. R eats food. B throws a stun bottle. M uses the map. N deploys a noise lure. X fires the flash camera. V places a door jammer. Z uses the scent mask. F toggles the flashlight. P pauses.',true));
 window.addEventListener('beforeinstallprompt',event=>{
   event.preventDefault();

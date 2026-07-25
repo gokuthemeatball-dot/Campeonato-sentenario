@@ -3,6 +3,10 @@
 .touch-actions{display:grid;grid-template-columns:repeat(4,minmax(62px,1fr));gap:6px;max-width:460px}
 .touch-actions button{font-size:9px;padding:8px}
 .touch-actions .primary-touch{grid-column:span 2;color:var(--acid);font-weight:800;border-color:#70855f}
+.screen-reader-controls .touch-controls{outline:2px solid var(--acid);outline-offset:-2px}
+.screen-reader-controls .dpad button,.screen-reader-controls .touch-actions button{min-height:56px;font-size:11px}
+.screen-reader-controls .touch-actions{grid-template-columns:repeat(2,minmax(100px,1fr))}
+.screen-reader-controls .touch-actions .primary-touch{grid-column:span 2}
 .jump-scare{position:fixed;z-index:100;inset:0;background:#000;display:grid;place-items:center;overflow:hidden;animation:scareShake .09s steps(2) infinite}
 .jump-scare[hidden]{display:none}
 .jump-scare img{width:100%;height:100%;object-fit:cover;filter:contrast(1.8) saturate(.3) brightness(.55);transform:scale(1.45)}
@@ -43,6 +47,10 @@
   .touch-actions{flex:1;grid-template-columns:repeat(3,minmax(48px,1fr));gap:4px}
   .touch-actions button{min-height:32px;padding:4px;font-size:8px}
   .touch-actions .primary-touch{grid-column:span 2}
+  .screen-reader-controls .touch-controls{flex-direction:column}
+  .screen-reader-controls .dpad{align-self:center}
+  .screen-reader-controls .touch-actions{width:100%;grid-template-columns:repeat(2,minmax(110px,1fr))}
+  .screen-reader-controls .touch-actions button{min-height:54px;font-size:11px}
   .jump-scare strong{bottom:16%}
   .story-card{grid-template-columns:82px 1fr;column-gap:12px}
   .story-card img{width:82px;height:120px}
