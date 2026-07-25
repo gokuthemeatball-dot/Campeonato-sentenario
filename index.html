@@ -29,6 +29,7 @@
         </div>
         <div class="status-group">
           <span id="powerStatus">POWER: OFF</span>
+          <span id="energyStatus">ENERGY: 100</span>
           <span id="dangerStatus">DANGER: UNKNOWN</span>
         </div>
       </div>
@@ -42,7 +43,7 @@
       <div class="game-bottombar">
         <div class="inventory">
           <span class="label">INVENTORY</span>
-          <div><b id="fuseItem">FUSE ○</b><b id="keyItem">KEYCARD ○</b></div>
+          <div><b id="fuseItem">FUSE ○</b><b id="keyItem">KEYCARD ○</b><b id="craftItem">STUN BOTTLE ○</b></div>
         </div>
         <div class="action-log">
           <span class="label">LAST UPDATE</span>
@@ -64,7 +65,8 @@
         <div><kbd>← →</kbd><span>turn left or right</span></div>
         <div><kbd>↑ ↓</kbd><span>forward or backward</span></div>
         <div><kbd>Shift + ↑</kbd><span>run forward</span></div>
-        <div><kbd>E</kbd><span>interact or hide</span></div>
+        <div><kbd>E</kbd><span>interact, collect, or eat</span></div>
+        <div><kbd>B</kbd><span>throw crafted stun bottle</span></div>
         <div><kbd>F</kbd><span>flashlight</span></div>
         <div><kbd>P</kbd><span>pause</span></div>
       </section>
@@ -116,6 +118,6 @@
   </div>
 
   <p id="liveRegion" class="sr-only" aria-live="assertive" aria-atomic="true"></p>
-  <script src="script.js?v=35"></script>
+  <script src="script.js?v=36"></script>
 </body>
 </html>
