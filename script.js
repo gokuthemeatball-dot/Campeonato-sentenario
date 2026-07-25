@@ -20,7 +20,7 @@ const bossStart = { x: 28, y: 17 };
 const fuse = { x: 3, y: 17, name: 'stockroom fuse' };
 const keycard = { x: 28, y: 2, name: 'office keycard' };
 const exit = { x: 30, y: 18, name: 'loading exit' };
-const cleaningSpots = [{x:4,y:3},{x:7,y:3},{x:7,y:7}];
+const cleaningSpots = [{x:4,y:3},{x:7,y:3}];
 const foodSpots = [{x:3,y:7},{x:10,y:8},{x:23,y:12},{x:28,y:9}];
 const bottleSpot = {x:10,y:2};
 const cleanerSpot = {x:15,y:8};
@@ -208,15 +208,15 @@ function interact() {
       return;
     }
   }
-  const foodIndex=foodSpots.findIndex((spot,index)=>!eatenFood.has(index)&&manhattan(player,spot)<=1);
+  const foodIndex=phase!=='cleaning'?foodSpots.findIndex((spot,index)=>!eatenFood.has(index)&&manhattan(player,spot)<=1):-1;
   if(foodIndex>=0){
     eatenFood.add(foodIndex);energy=Math.min(100,energy+35);eatSound();
     announce(`Food eaten. Energy restored to ${Math.round(energy)}.`,false);updateHud();draw();return;
   }
-  if(!hasBottle&&manhattan(player,bottleSpot)<=1){
+  if(phase!=='cleaning'&&!hasBottle&&manhattan(player,bottleSpot)<=1){
     hasBottle=true;pickupSound();announce('Empty bottle collected. Find cleaner to craft a stun bottle.',false);tryCraft();updateHud();draw();return;
   }
-  if(!hasCleaner&&manhattan(player,cleanerSpot)<=1){
+  if(phase!=='cleaning'&&!hasCleaner&&manhattan(player,cleanerSpot)<=1){
     hasCleaner=true;pickupSound();announce('Cleaner collected. Find an empty bottle to craft a stun bottle.',false);tryCraft();updateHud();draw();return;
   }
   const hide = hideSpots.find(h => manhattan(player,h) <= 1);
@@ -264,9 +264,9 @@ function nearestImportant() {
   else if (!hasKey) targets.push({...keycard,label:'Keycard'});
   else targets.push({...exit,label:'Exit'});
   hideSpots.forEach(h => targets.push({...h,label:'Hiding place'}));
-  if(energy<55)foodSpots.forEach((spot,index)=>{if(!eatenFood.has(index))targets.push({...spot,label:'Food'});});
-  if(!hasBottle)targets.push({...bottleSpot,label:'Empty bottle'});
-  if(!hasCleaner)targets.push({...cleanerSpot,label:'Cleaner'});
+  if(phase!=='cleaning'&&energy<55)foodSpots.forEach((spot,index)=>{if(!eatenFood.has(index))targets.push({...spot,label:'Food'});});
+  if(phase!=='cleaning'&&!hasBottle)targets.push({...bottleSpot,label:'Empty bottle'});
+  if(phase!=='cleaning'&&!hasCleaner)targets.push({...cleanerSpot,label:'Cleaner'});
   targets.sort((a,b)=>manhattan(player,a)-manhattan(player,b));
   const target = targets[0];
   const dx=target.x-player.x,dy=target.y-player.y;
@@ -363,9 +363,9 @@ function draw() {
   }
   hideSpots.forEach(h=>drawMarker(h,'#50645f','H'));
   if(phase==='cleaning')cleaningSpots.forEach((spot,index)=>{if(!cleanedSpots.has(index))drawMarker(spot,'#7fd9e8','CLEAN');});
-  foodSpots.forEach((spot,index)=>{if(!eatenFood.has(index))drawMarker(spot,'#c7ff4a','FOOD');});
-  if(!hasBottle)drawMarker(bottleSpot,'#9bc8ff','BOT');
-  if(!hasCleaner)drawMarker(cleanerSpot,'#d49bff','SOAP');
+  if(phase!=='cleaning')foodSpots.forEach((spot,index)=>{if(!eatenFood.has(index))drawMarker(spot,'#c7ff4a','FOOD');});
+  if(phase!=='cleaning'&&!hasBottle)drawMarker(bottleSpot,'#9bc8ff','BOT');
+  if(phase!=='cleaning'&&!hasCleaner)drawMarker(cleanerSpot,'#d49bff','SOAP');
   if(phase!=='cleaning'&&!hasFuse)drawMarker(fuse,'#ffc44a','F');
   if(powerOn&&!hasKey)drawMarker(keycard,'#54cfff','K');
   drawMarker(exit,hasKey?'#c7ff4a':'#5a665f','EXIT');
@@ -473,17 +473,17 @@ function keyRattle(dx){[1480,1810,1320].forEach((f,i)=>setTimeout(()=>tone(f,.02
 function gameLoop(time){bossStep(time);requestAnimationFrame(gameLoop);}
 window.addEventListener('keydown',event=>{
   if(document.querySelector('#startModal').hidden===false||document.querySelector('#accessModal').hidden===false)return;
-  if(event.code==='ArrowUp'){event.preventDefault();moveFacing(false,event.shiftKey);}
-  else if(event.code==='ArrowDown'){event.preventDefault();moveFacing(true,false);}
-  else if(event.code==='ArrowLeft'){event.preventDefault();turnPlayer(-1);}
-  else if(event.code==='ArrowRight'){event.preventDefault();turnPlayer(1);}
-  else if(event.code==='KeyE'||event.code==='Space'){event.preventDefault();interact();}
-  else if(event.code==='KeyC'){event.preventDefault();audioCompass();}
-  else if(event.code==='KeyQ'){event.preventDefault();announce(objective(),true);}
-  else if(event.code==='KeyF'){event.preventDefault();flashlight=!flashlight;announce(`Flashlight ${flashlight?'on':'off'}.`,true);flashlightSound();draw();}
-  else if(event.code==='KeyB'){event.preventDefault();useStunBottle();}
-  else if(event.code==='KeyH'){event.preventDefault();if(!hidden){crouching=!crouching;announce(crouching?'Crouched. You can move quietly and are harder to see.':'Standing. You move normally again.',true);draw();}}
-  else if(event.code==='KeyP'){event.preventDefault();paused=!paused;document.querySelector('#pauseCard').hidden=!paused;announce(paused?'Game paused.':'Game resumed.',true);}
+  const code=event.code;
+  if(code==='ArrowUp'){event.preventDefault();moveFacing(false,event.shiftKey);}
+  else if(code==='ArrowDown'){event.preventDefault();moveFacing(true,false);}
+  else if(code==='ArrowLeft'||code==='ArrowRight'){event.preventDefault();turnPlayer(code==='ArrowLeft'?-1:1);}
+  else if(code==='KeyE'||code==='Space'){event.preventDefault();interact();}
+  else if(code==='KeyC'){event.preventDefault();audioCompass();}
+  else if(code==='KeyQ'){event.preventDefault();announce(objective(),true);}
+  else if(code==='KeyF'){event.preventDefault();flashlight=!flashlight;announce(`Flashlight ${flashlight?'on':'off'}.`,true);flashlightSound();draw();}
+  else if(code==='KeyB'){event.preventDefault();useStunBottle();}
+  else if(code==='KeyH'){event.preventDefault();if(!event.repeat&&!hidden){crouching=!crouching;announce(crouching?'Crouched. You can move quietly and are harder to see.':'Standing. You move normally again.',true);draw();}}
+  else if(code==='KeyP'){event.preventDefault();paused=!paused;document.querySelector('#pauseCard').hidden=!paused;announce(paused?'Game paused.':'Game resumed.',true);}
 },{capture:true});
 document.querySelectorAll('[data-move]').forEach(button=>button.addEventListener('click',()=>{
   const action=button.dataset.move;
@@ -503,7 +503,7 @@ document.querySelector('#startButton').addEventListener('click',()=>{
   startStoreMusic();
   canvas.focus();
   tone(660,.09,0);setTimeout(()=>tone(880,.14,0),110);
-  announce(`Mr. Hollow says: You're hired for the night shift. Start by cleaning the three marked spills.`,true);
+  announce(`Mr. Hollow says: You're hired for the night shift. Start by cleaning the two marked spills.`,true);
 });
 document.querySelector('#restartButton').addEventListener('click',()=>{resetGame();startStoreMusic();announce(objective(),true);});
 document.querySelector('#accessButton').addEventListener('click',()=>{document.querySelector('#accessModal').hidden=false;});
