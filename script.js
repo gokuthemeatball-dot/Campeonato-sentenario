@@ -173,7 +173,13 @@ let gestureWentDown = false;
 let gestureWentUp = false;
 let gestureFirstVertical = '';
 let gesturePattern = '';
-let gestureLastTap = 0;
+let gestureTapCount = 0;
+let gestureTapTimer = null;
+let gestureRunArmedUntil = 0;
+let activeGesturePointers = new Set();
+let twoFingerTouch = false;
+let twoFingerTapCount = 0;
+let twoFingerTapTimer = null;
 
 const spanishExact = {
   'Listen to Mr. Hollow’s instructions.':'Escucha las instrucciones del señor Hollow.',
@@ -205,8 +211,9 @@ const spanishExact = {
   'Game paused.':'Juego en pausa.',
   'Game resumed.':'Juego reanudado.',
   'Standard control layout active.':'Controles estándar activados.',
-  'Blind gesture mode active. Turn off VoiceOver or TalkBack now. Swipe and hold to move, double tap to interact, down then up to choose an item, and up then down to use it.':'Modo de gestos para jugadores ciegos activado. Ahora desactiva VoiceOver o TalkBack. Desliza y mantén para moverte, toca dos veces para interactuar, abajo y arriba para elegir un objeto, y arriba y abajo para usarlo.',
+  'Blind gesture mode active. Turn off VoiceOver or TalkBack now. Swipe and hold to walk. Tap once, then swipe up and hold to run. Double tap to interact, triple tap for the flashlight, and two-finger double tap to eat.':'Modo de gestos para jugadores ciegos activado. Ahora desactiva VoiceOver o TalkBack. Desliza y mantén para caminar. Toca una vez y después desliza hacia arriba y mantén para correr. Toca dos veces para interactuar, tres veces para la linterna y toca dos veces con dos dedos para comer.',
   'Blind gesture mode selected. Start the game first, then turn off VoiceOver or TalkBack when instructed.':'Modo de gestos para jugadores ciegos seleccionado. Primero inicia el juego y después desactiva VoiceOver o TalkBack cuando se te indique.',
+  'Running forward.':'Corriendo hacia adelante.',
   'You are the new night employee. I am Mr. Hollow. While these doors are open, every customer leaves satisfied.':'Eres el nuevo empleado nocturno. Soy el señor Hollow. Mientras estas puertas estén abiertas, todos los clientes deben salir satisfechos.',
   'Understood. Where do you need me?':'Entendido. ¿Dónde me necesita?',
   'Front checkout. Three customers remain. Scan their items, take payment, and do not ask why they are shopping this late.':'La caja principal. Quedan tres clientes. Escanea sus productos, cobra y no preguntes por qué compran tan tarde.'
@@ -982,7 +989,8 @@ function useSelectedGestureItem(){
   item.use();
 }
 function gestureStep(direction){
-  if(direction==='up')moveFacing(false,false);
+  if(direction==='run')moveFacing(false,true);
+  else if(direction==='up')moveFacing(false,false);
   else if(direction==='down')moveFacing(true,false);
   else if(direction==='left')turnPlayer(-1);
   else if(direction==='right')turnPlayer(1);
@@ -1004,11 +1012,19 @@ function beginGestureHold(direction){
 gesturePad.addEventListener('pointerdown',event=>{
   event.preventDefault();
   gesturePad.setPointerCapture?.(event.pointerId);
+  activeGesturePointers.add(event.pointerId);
+  if(activeGesturePointers.size>=2){
+    twoFingerTouch=true;
+    stopGestureHold();
+    gestureStart=null;
+    return;
+  }
   gestureStart={x:event.clientX,y:event.clientY,time:performance.now(),id:event.pointerId};
   gestureLast={x:event.clientX,y:event.clientY};
   gestureDirection='';gestureWentDown=false;gestureWentUp=false;gestureFirstVertical='';gesturePattern='';
 });
 gesturePad.addEventListener('pointermove',event=>{
+  if(twoFingerTouch||activeGesturePointers.size>1)return;
   if(!gestureStart||event.pointerId!==gestureStart.id)return;
   event.preventDefault();
   gestureLast={x:event.clientX,y:event.clientY};
@@ -1018,9 +1034,52 @@ gesturePad.addEventListener('pointermove',event=>{
   if(gestureFirstVertical==='up'&&dy>28)gesturePattern='up-down';
   if(gesturePattern){stopGestureHold();return;}
   if(Math.max(Math.abs(dx),Math.abs(dy))<34)return;
-  beginGestureHold(Math.abs(dy)>=Math.abs(dx)?(dy<0?'up':'down'):(dx<0?'left':'right'));
+  let direction=Math.abs(dy)>=Math.abs(dx)?(dy<0?'up':'down'):(dx<0?'left':'right');
+  if(direction==='up'&&performance.now()<gestureRunArmedUntil&&gestureTapCount===1){
+    direction='run';
+    gestureTapCount=0;
+    gestureRunArmedUntil=0;
+    if(gestureTapTimer){clearTimeout(gestureTapTimer);gestureTapTimer=null;}
+    announce('Running forward.',false);
+  }
+  beginGestureHold(direction);
 });
+function registerSimpleGestureTap(){
+  const now=performance.now();
+  gestureTapCount++;
+  if(gestureTapTimer){clearTimeout(gestureTapTimer);gestureTapTimer=null;}
+  if(gestureTapCount===1){
+    gestureRunArmedUntil=now+700;
+    gestureTapTimer=setTimeout(()=>{gestureTapCount=0;gestureRunArmedUntil=0;gestureTapTimer=null;},720);
+  }else if(gestureTapCount===2){
+    gestureTapTimer=setTimeout(()=>{gestureTapCount=0;gestureRunArmedUntil=0;gestureTapTimer=null;interact();},360);
+  }else{
+    gestureTapCount=0;gestureRunArmedUntil=0;
+    flashlight=!flashlight;
+    announce(`Flashlight ${flashlight?'on':'off'}.`,true);
+    flashlightSound();
+    draw();
+  }
+}
+function registerTwoFingerTap(){
+  twoFingerTapCount++;
+  if(twoFingerTapTimer){clearTimeout(twoFingerTapTimer);twoFingerTapTimer=null;}
+  if(twoFingerTapCount>=2){
+    twoFingerTapCount=0;
+    eatCarriedFood();
+  }else twoFingerTapTimer=setTimeout(()=>{twoFingerTapCount=0;twoFingerTapTimer=null;},520);
+}
 function finishGesture(event){
+  activeGesturePointers.delete(event.pointerId);
+  if(twoFingerTouch){
+    event.preventDefault();
+    if(activeGesturePointers.size===0){
+      twoFingerTouch=false;
+      gestureStart=null;gestureLast=null;gestureDirection='';gesturePattern='';
+      registerTwoFingerTap();
+    }
+    return;
+  }
   if(!gestureStart||event.pointerId!==gestureStart.id)return;
   event.preventDefault();
   const duration=performance.now()-gestureStart.time;
@@ -1029,11 +1088,7 @@ function finishGesture(event){
   stopGestureHold();
   if(gesturePattern==='down-up')selectNextGestureItem();
   else if(gesturePattern==='up-down')useSelectedGestureItem();
-  else if(distance<22&&duration<280){
-    const now=performance.now();
-    if(now-gestureLastTap<390){gestureLastTap=0;interact();}
-    else gestureLastTap=now;
-  }
+  else if(distance<22&&duration<280)registerSimpleGestureTap();
   gestureStart=null;gestureLast=null;gestureDirection='';gesturePattern='';
 }
 gesturePad.addEventListener('pointerup',finishGesture);
@@ -1392,14 +1447,14 @@ document.querySelector('#startButton').addEventListener('click',()=>{
   (blindMode?gesturePad:canvas).focus();
   tone(660,.09,0);setTimeout(()=>tone(880,.14,0),110);
   if(blindMode){
-    announce('Blind gesture mode active. Turn off VoiceOver or TalkBack now. Swipe and hold to move, double tap to interact, down then up to choose an item, and up then down to use it.',true);
+    announce('Blind gesture mode active. Turn off VoiceOver or TalkBack now. Swipe and hold to walk. Tap once, then swipe up and hold to run. Double tap to interact, triple tap for the flashlight, and two-finger double tap to eat.',true);
     setTimeout(startIntro,5200);
   }else startIntro();
 });
 document.querySelector('#restartButton').addEventListener('click',()=>{resetGame();startIntro();});
 document.querySelector('#accessButton').addEventListener('click',()=>{document.querySelector('#accessModal').hidden=false;});
 document.querySelector('#startAccessButton').addEventListener('click',()=>{document.querySelector('#accessModal').hidden=false;});
-document.querySelector('#closeAccessButton').addEventListener('click',()=>{blindMode=document.querySelector('#blindModeStart').checked;if(blindMode)narrationToggle.checked=true;document.body.classList.toggle('screen-reader-controls',blindMode);gestureControls.hidden=!blindMode;document.querySelector('#accessModal').hidden=true;announce(blindMode?(running?'Blind gesture mode active. Turn off VoiceOver or TalkBack now. Swipe and hold to move, double tap to interact, down then up to choose an item, and up then down to use it.':'Blind gesture mode selected. Start the game first, then turn off VoiceOver or TalkBack when instructed.'):'Standard control layout active.',true);(blindMode&&running?gesturePad:canvas).focus();});
+document.querySelector('#closeAccessButton').addEventListener('click',()=>{blindMode=document.querySelector('#blindModeStart').checked;if(blindMode)narrationToggle.checked=true;document.body.classList.toggle('screen-reader-controls',blindMode);gestureControls.hidden=!blindMode;document.querySelector('#accessModal').hidden=true;announce(blindMode?(running?'Blind gesture mode active. Turn off VoiceOver or TalkBack now. Swipe and hold to walk. Tap once, then swipe up and hold to run. Double tap to interact, triple tap for the flashlight, and two-finger double tap to eat.':'Blind gesture mode selected. Start the game first, then turn off VoiceOver or TalkBack when instructed.'):'Standard control layout active.',true);(blindMode&&running?gesturePad:canvas).focus();});
 document.querySelector('#helpButton').addEventListener('click',()=>announce('Arrows move and turn. H crouches. E interacts. R eats food. B throws a stun bottle. M uses the map. N deploys a noise lure. X fires the flash camera. V places a door jammer. Z uses the scent mask. F toggles the flashlight. P pauses.',true));
 window.addEventListener('beforeinstallprompt',event=>{
   event.preventDefault();
