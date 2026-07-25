@@ -90,25 +90,55 @@ async function processAudio() {
     const backingLeft = new Float32Array(left.length);
     const backingRight = new Float32Array(left.length);
 
-    for (let i = 0; i < left.length; i++) {
-      const mid = (left[i] + right[i]) * 0.5;
-      const side = (left[i] - right[i]) * 0.5;
-      const center = mid - side * 0.12;
-      karaokeLeft[i] = softLimit(side * 1.35);
-      karaokeRight[i] = softLimit(-side * 1.35);
-      vocalLeft[i] = softLimit(center);
-      vocalRight[i] = softLimit(center);
-      backingLeft[i] = softLimit(side * 1.55);
-      backingRight[i] = softLimit(-side * 1.55);
+    // Frequency-aware mid/side separation. Removing the filtered center from
+    // each original channel keeps the stereo field instead of collapsing the
+    // instrumental to a phase-cancelled mono-like result.
+    const centerHighPass = createBiquad('highpass', 95, sampleRate, 0.707);
+    const centerLowPass = createBiquad('lowpass', 14500, sampleRate, 0.707);
+    const sideHighPass = createBiquad('highpass', 120, sampleRate, 0.707);
+    const sideLowPass = createBiquad('lowpass', 12000, sampleRate, 0.707);
+    const blockSize = 2048;
+    let removalStrength = 0.78;
+
+    for (let blockStart = 0; blockStart < left.length; blockStart += blockSize) {
+      const blockEnd = Math.min(left.length, blockStart + blockSize);
+      const correlation = stereoCorrelation(left, right, blockStart, blockEnd);
+      const targetStrength = buffer.numberOfChannels > 1
+        ? clamp(0.66 + Math.max(0, correlation) * 0.28, 0.66, 0.94)
+        : 0.72;
+
+      for (let i = blockStart; i < blockEnd; i++) {
+        removalStrength += (targetStrength - removalStrength) * 0.0025;
+        const mid = (left[i] + right[i]) * 0.5;
+        const side = (left[i] - right[i]) * 0.5;
+        const centerVocalBand = centerLowPass.process(centerHighPass.process(mid));
+        const wideVocalBand = sideLowPass.process(sideHighPass.process(side));
+        const centerToRemove = centerVocalBand * removalStrength;
+
+        // Subtract equally from the untouched L/R channels. Any stereo
+        // ambience and panned instruments remain in their original positions.
+        karaokeLeft[i] = softLimit((left[i] - centerToRemove) * 1.04);
+        karaokeRight[i] = softLimit((right[i] - centerToRemove) * 1.04);
+
+        // Keep a small amount of width around the centered lead vocal so the
+        // vocal mix sounds natural on headphones instead of dual-mono.
+        vocalLeft[i] = softLimit(centerVocalBand + wideVocalBand * 0.12);
+        vocalRight[i] = softLimit(centerVocalBand - wideVocalBand * 0.12);
+
+        // Backing vocals are often panned wider than the lead. This focuses
+        // that side information while maintaining its true stereo direction.
+        backingLeft[i] = softLimit(wideVocalBand * 1.6 + centerVocalBand * 0.07);
+        backingRight[i] = softLimit(-wideVocalBand * 1.6 + centerVocalBand * 0.07);
+      }
     }
 
     setProgress(68, 'Building your three mixes');
     await nextFrame();
     const baseName = selectedFile.name.replace(/\.[^.]+$/, '') || 'karaokelab';
     const tracks = [
-      makeTrack('Karaoke mix', 'Center-vocal reduced', `${baseName}-karaoke.wav`, karaokeLeft, karaokeRight, sampleRate),
-      makeTrack('Vocal focus', 'Main vocal and center audio', `${baseName}-vocals.wav`, vocalLeft, vocalRight, sampleRate),
-      makeTrack('Backing-vocal focus', 'Experimental side-vocal mix', `${baseName}-backing-vocals.wav`, backingLeft, backingRight, sampleRate)
+      makeTrack('Stereo instrumental', 'Lead-vocal reduced · original stereo field', `${baseName}-stereo-instrumental.wav`, karaokeLeft, karaokeRight, sampleRate),
+      makeTrack('Main vocal focus', 'Centered vocal · natural stereo ambience', `${baseName}-main-vocals.wav`, vocalLeft, vocalRight, sampleRate),
+      makeTrack('Backing-vocal focus', 'Experimental wide-vocal stereo mix', `${baseName}-backing-vocals.wav`, backingLeft, backingRight, sampleRate)
     ];
     setProgress(92, 'Preparing downloads');
     renderTracks(tracks);
@@ -196,6 +226,57 @@ function floatToPcm(value) {
 }
 function softLimit(value) {
   return Math.tanh(value * 1.08);
+}
+function clamp(value, minimum, maximum) {
+  return Math.max(minimum, Math.min(maximum, value));
+}
+function stereoCorrelation(left, right, start, end) {
+  let cross = 0;
+  let leftEnergy = 0;
+  let rightEnergy = 0;
+  for (let i = start; i < end; i++) {
+    cross += left[i] * right[i];
+    leftEnergy += left[i] * left[i];
+    rightEnergy += right[i] * right[i];
+  }
+  const denominator = Math.sqrt(leftEnergy * rightEnergy);
+  return denominator > 1e-10 ? clamp(cross / denominator, -1, 1) : 0;
+}
+function createBiquad(type, frequency, sampleRate, q) {
+  const omega = 2 * Math.PI * Math.min(frequency, sampleRate * 0.45) / sampleRate;
+  const cosine = Math.cos(omega);
+  const sine = Math.sin(omega);
+  const alpha = sine / (2 * q);
+  const a0 = 1 + alpha;
+  let b0;
+  let b1;
+  let b2;
+  if (type === 'highpass') {
+    b0 = (1 + cosine) / 2;
+    b1 = -(1 + cosine);
+    b2 = (1 + cosine) / 2;
+  } else {
+    b0 = (1 - cosine) / 2;
+    b1 = 1 - cosine;
+    b2 = (1 - cosine) / 2;
+  }
+  const a1 = -2 * cosine;
+  const a2 = 1 - alpha;
+  let x1 = 0;
+  let x2 = 0;
+  let y1 = 0;
+  let y2 = 0;
+  return {
+    process(input) {
+      const output = (b0 / a0) * input + (b1 / a0) * x1 + (b2 / a0) * x2
+        - (a1 / a0) * y1 - (a2 / a0) * y2;
+      x2 = x1;
+      x1 = input;
+      y2 = y1;
+      y1 = output;
+      return output;
+    }
+  };
 }
 function setProgress(percent, text) {
   progressBar.style.width = `${percent}%`;
