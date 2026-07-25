@@ -18,15 +18,18 @@ const wedgeItem = document.querySelector('#wedgeItem');
 const maskItem = document.querySelector('#maskItem');
 const narrationToggle = document.querySelector('#narrationToggle');
 const soundToggle = document.querySelector('#soundToggle');
-const dangerMusic = new Audio('danger-song.mp3?v=48');
+const dangerMusic = new Audio('danger-song.mp3?v=50');
 dangerMusic.loop = true;
 dangerMusic.preload = 'auto';
-const deathMusic = new Audio('death-song.mp3?v=48');
+const deathMusic = new Audio('death-song.mp3?v=50');
 deathMusic.loop = true;
 deathMusic.preload = 'auto';
-const lightsOutMusic = new Audio('lights-out-song.mp3?v=48');
+const lightsOutMusic = new Audio('lights-out-song.mp3?v=50');
 lightsOutMusic.loop = false;
 lightsOutMusic.preload = 'auto';
+const storeTrack = new Audio('store-song.mp3?v=50');
+storeTrack.loop = true;
+storeTrack.preload = 'auto';
 
 const TILE = 40;
 const COLS = 32;
@@ -137,6 +140,9 @@ let dangerNearSince;
 let dangerFarSince;
 let dangerFadeTimer;
 let lightsOutMusicActive;
+let lightsOutTransitionTimer;
+let storeTrackActive;
+let storeTrackFadeTimer;
 let audioContext;
 let ambientGain;
 let lastAnnouncement = '';
@@ -146,6 +152,7 @@ function resetGame() {
   stopDangerMusic(true);
   stopDeathMusic();
   stopLightsOutMusic();
+  stopStoreTrack(true);
   if(themeTimer){clearInterval(themeTimer);themeTimer=null;}
   player = {...playerStart};
   boss = {...bossStart};
@@ -208,6 +215,7 @@ function resetGame() {
   dangerNearSince = 0;
   dangerFarSince = 0;
   lightsOutMusicActive = false;
+  storeTrackActive = false;
   powerOn = true;
   document.querySelector('#endModal').hidden = true;
   document.querySelector('#storyModal').hidden = true;
@@ -270,7 +278,7 @@ function startIntro(){
     {speaker:'MR. HOLLOW',text:'You are the new night employee. I am Mr. Hollow. While these doors are open, every customer leaves satisfied.'},
     {speaker:'YOU',text:'Understood. Where do you need me?'},
     {speaker:'MR. HOLLOW',text:'Front checkout. Three customers remain. Scan their items, take payment, and do not ask why they are shopping this late.'}
-  ],()=>{stopStoreMusic();phase='customers';announce('Walk to the front checkout and press E to serve each customer.',true);updateHud();draw();});
+  ],()=>{stopStoreMusic();phase='customers';playStoreTrack(false);announce('Walk to the front checkout and press E to serve each customer.',true);updateHud();draw();});
 }
 
 function updateHud() {
@@ -368,11 +376,12 @@ function interact() {
       customersServed++;
       checkoutSound();
       if(customersServed>=3){
+        stopStoreTrack(false);
         startStoreMusic();
         openDialogue([
           {speaker:'MR. HOLLOW',text:'That is enough. Lock the register. The customers always leave before dark.'},
           {speaker:'MR. HOLLOW',text:'Two spills remain in aisles three and four. Clean them, then report to me. Do not open the loading door.'}
-        ],()=>{stopStoreMusic();phase='cleaning';announce('Mr. Hollow orders you to clean the two marked spills.',true);updateHud();draw();});
+        ],()=>{stopStoreMusic();phase='cleaning';playStoreTrack(true);announce('Mr. Hollow orders you to clean the two marked spills.',true);updateHud();draw();});
       }
       updateHud();draw();return;
     }
@@ -608,6 +617,7 @@ function endGame(success){
   running=false;won=success;
   stopDangerMusic(!success);
   stopLightsOutMusic();
+  stopStoreTrack(true);
   if(themeTimer){clearInterval(themeTimer);themeTimer=null;}
   document.querySelector('#endKicker').textContent=success?'SHIFT SURVIVED':'SHIFT ENDED';
   document.querySelector('#endTitle').textContent=success?'YOU ESCAPED.':'CAUGHT.';
@@ -864,7 +874,7 @@ function primeDeathMusic(){
   if(primed)primed.then(()=>{deathMusic.pause();deathMusic.currentTime=0;deathMusic.volume=.82;}).catch(()=>{});
 }
 function playLightsOutMusic(){
-  if(!soundToggle.checked)return;
+  if(!soundToggle.checked){lightsOutMusicActive=false;return;}
   if(themeTimer){clearInterval(themeTimer);themeTimer=null;}
   lightsOutMusicActive=true;
   lightsOutMusic.currentTime=0;
@@ -872,6 +882,7 @@ function playLightsOutMusic(){
   lightsOutMusic.play().catch(()=>{lightsOutMusicActive=false;});
 }
 function stopLightsOutMusic(){
+  if(lightsOutTransitionTimer){clearTimeout(lightsOutTransitionTimer);lightsOutTransitionTimer=null;}
   lightsOutMusic.pause();
   lightsOutMusic.currentTime=0;
   lightsOutMusicActive=false;
@@ -882,6 +893,48 @@ function primeLightsOutMusic(){
   if(primed)primed.then(()=>{lightsOutMusic.pause();lightsOutMusic.currentTime=0;lightsOutMusic.volume=.82;}).catch(()=>{});
 }
 lightsOutMusic.addEventListener('ended',()=>{lightsOutMusicActive=false;});
+function fadeStoreTrack(target,duration,onDone){
+  if(storeTrackFadeTimer)clearInterval(storeTrackFadeTimer);
+  const startVolume=storeTrack.volume;
+  const started=performance.now();
+  storeTrackFadeTimer=setInterval(()=>{
+    const progress=Math.min(1,(performance.now()-started)/duration);
+    storeTrack.volume=Math.max(0,Math.min(1,startVolume+(target-startVolume)*progress));
+    if(progress>=1){
+      clearInterval(storeTrackFadeTimer);
+      storeTrackFadeTimer=null;
+      if(onDone)onDone();
+    }
+  },40);
+}
+function playStoreTrack(resume=false){
+  if(!soundToggle.checked)return;
+  if(storeTrackFadeTimer){clearInterval(storeTrackFadeTimer);storeTrackFadeTimer=null;}
+  if(!resume)storeTrack.currentTime=0;
+  storeTrackActive=true;
+  storeTrack.volume=0;
+  storeTrack.play().then(()=>fadeStoreTrack(.62,550)).catch(()=>{storeTrackActive=false;});
+}
+function stopStoreTrack(reset=false){
+  if(storeTrackFadeTimer){clearInterval(storeTrackFadeTimer);storeTrackFadeTimer=null;}
+  if(reset){
+    storeTrack.pause();
+    storeTrack.currentTime=0;
+    storeTrack.volume=0;
+    storeTrackActive=false;
+    return;
+  }
+  if(!storeTrackActive)return;
+  fadeStoreTrack(0,400,()=>{
+    storeTrack.pause();
+    storeTrackActive=false;
+  });
+}
+function primeStoreTrack(){
+  storeTrack.volume=0;
+  const primed=storeTrack.play();
+  if(primed)primed.then(()=>{storeTrack.pause();storeTrack.currentTime=0;}).catch(()=>{});
+}
 function startStoreMusic(){
   if(themeTimer)clearInterval(themeTimer);
   let pulse=0;const drones=[98,103,92,87];
@@ -907,9 +960,18 @@ function beginHorror(){
   bossSearching=false;
   lastAmbush=performance.now();
   lastFearEvent=performance.now();
-  powerFailureSound();
-  setTimeout(()=>tone(55,.7,0),430);
-  playLightsOutMusic();
+  lightsOutMusicActive=true;
+  fadeStoreTrack(0,750,()=>{
+    storeTrack.pause();
+    storeTrack.currentTime=0;
+    storeTrackActive=false;
+  });
+  lightsOutTransitionTimer=setTimeout(()=>{
+    lightsOutTransitionTimer=null;
+    powerFailureSound();
+    playLightsOutMusic();
+    setTimeout(()=>tone(55,.7,0),430);
+  },550);
   announce('The final spill is clean. The lights die. Mr. Hollow locks the doors. You pocket three food portions. Find the stockroom fuse and escape.',true);
 }
 function tone(frequency,duration,pan=0){if(!soundToggle.checked)return;ensureAudio();const o=audioContext.createOscillator(),g=audioContext.createGain(),p=audioContext.createStereoPanner?audioContext.createStereoPanner():audioContext.createGain();o.frequency.value=frequency;o.type='triangle';g.gain.setValueAtTime(.055,audioContext.currentTime);g.gain.exponentialRampToValueAtTime(.001,audioContext.currentTime+duration);if('pan'in p)p.pan.value=Math.max(-1,Math.min(1,pan));o.connect(g).connect(p).connect(audioContext.destination);o.start();o.stop(audioContext.currentTime+duration);}
@@ -993,12 +1055,12 @@ document.querySelector('#repeatButton').addEventListener('click',()=>announce(ob
 document.querySelector('#contrastToggle').addEventListener('change',event=>document.body.classList.toggle('extra-contrast',event.target.checked));
 soundToggle.addEventListener('change',()=>{
   if(ambientGain)ambientGain.gain.setTargetAtTime(soundToggle.checked?.018:0,audioContext.currentTime,.08);
-  if(!soundToggle.checked){stopDangerMusic(true);stopDeathMusic();stopLightsOutMusic();}
+  if(!soundToggle.checked){stopDangerMusic(true);stopDeathMusic();stopLightsOutMusic();stopStoreTrack(true);}
 });
 document.querySelector('#startButton').addEventListener('click',()=>{
   blindMode=document.querySelector('#blindModeStart').checked;
   document.querySelector('#startModal').hidden=true;
-  ensureAudio();primeDangerMusic();primeDeathMusic();primeLightsOutMusic();resetGame();
+  ensureAudio();primeDangerMusic();primeDeathMusic();primeLightsOutMusic();primeStoreTrack();resetGame();
   canvas.focus();
   tone(660,.09,0);setTimeout(()=>tone(880,.14,0),110);
   startIntro();
