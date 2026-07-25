@@ -18,9 +18,12 @@ const wedgeItem = document.querySelector('#wedgeItem');
 const maskItem = document.querySelector('#maskItem');
 const narrationToggle = document.querySelector('#narrationToggle');
 const soundToggle = document.querySelector('#soundToggle');
-const dangerMusic = new Audio('danger-song.mp3?v=46');
+const dangerMusic = new Audio('danger-song.mp3?v=47');
 dangerMusic.loop = true;
 dangerMusic.preload = 'auto';
+const deathMusic = new Audio('death-song.mp3?v=47');
+deathMusic.loop = true;
+deathMusic.preload = 'auto';
 
 const TILE = 40;
 const COLS = 32;
@@ -137,6 +140,7 @@ let blindMode = false;
 
 function resetGame() {
   stopDangerMusic(true);
+  stopDeathMusic();
   if(themeTimer){clearInterval(themeTimer);themeTimer=null;}
   player = {...playerStart};
   boss = {...bossStart};
@@ -595,12 +599,13 @@ function checkCaught(){
 }
 function endGame(success){
   running=false;won=success;
-  stopDangerMusic(false);
+  stopDangerMusic(!success);
   if(themeTimer){clearInterval(themeTimer);themeTimer=null;}
   document.querySelector('#endKicker').textContent=success?'SHIFT SURVIVED':'SHIFT ENDED';
   document.querySelector('#endTitle').textContent=success?'YOU ESCAPED.':'CAUGHT.';
   document.querySelector('#endMessage').textContent=success?'The loading door slams behind you. From inside, Mr. Hollow quietly says: “See you tomorrow.”':'Mr. Hollow found you between the aisles. Listen, hide, and try a quieter route.';
   document.querySelector('#endModal').hidden=false;
+  if(!success)playDeathMusic();
   announce(success?'You escaped Aisle 13. Shift survived.':'Caught by Mr. Hollow. Shift ended.',true);
 }
 
@@ -834,6 +839,21 @@ function primeDangerMusic(){
   const primed=dangerMusic.play();
   if(primed)primed.then(()=>{dangerMusic.pause();dangerMusic.currentTime=0;}).catch(()=>{});
 }
+function playDeathMusic(){
+  if(!soundToggle.checked)return;
+  deathMusic.currentTime=0;
+  deathMusic.volume=.82;
+  deathMusic.play().catch(()=>{});
+}
+function stopDeathMusic(){
+  deathMusic.pause();
+  deathMusic.currentTime=0;
+}
+function primeDeathMusic(){
+  deathMusic.volume=0;
+  const primed=deathMusic.play();
+  if(primed)primed.then(()=>{deathMusic.pause();deathMusic.currentTime=0;deathMusic.volume=.82;}).catch(()=>{});
+}
 function startStoreMusic(){
   if(themeTimer)clearInterval(themeTimer);
   let pulse=0;const drones=[98,103,92,87];
@@ -942,12 +962,12 @@ document.querySelector('#repeatButton').addEventListener('click',()=>announce(ob
 document.querySelector('#contrastToggle').addEventListener('change',event=>document.body.classList.toggle('extra-contrast',event.target.checked));
 soundToggle.addEventListener('change',()=>{
   if(ambientGain)ambientGain.gain.setTargetAtTime(soundToggle.checked?.018:0,audioContext.currentTime,.08);
-  if(!soundToggle.checked)stopDangerMusic(true);
+  if(!soundToggle.checked){stopDangerMusic(true);stopDeathMusic();}
 });
 document.querySelector('#startButton').addEventListener('click',()=>{
   blindMode=document.querySelector('#blindModeStart').checked;
   document.querySelector('#startModal').hidden=true;
-  ensureAudio();primeDangerMusic();resetGame();
+  ensureAudio();primeDangerMusic();primeDeathMusic();resetGame();
   startStoreMusic();
   canvas.focus();
   tone(660,.09,0);setTimeout(()=>tone(880,.14,0),110);
