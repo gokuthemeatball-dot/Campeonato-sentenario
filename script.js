@@ -362,5 +362,6 @@ document.querySelector('#startButton').addEventListener('click',()=>{
 document.querySelector('#restartButton').addEventListener('click',()=>{resetGame();announce(objective(),true);});
 document.querySelector('#helpButton').addEventListener('click',()=>announce('Use left and right arrows to turn. Up walks forward. Down walks backward. Hold Shift and press Up to run. Press E to interact or hide. C gives directions. Q repeats the objective. F toggles the flashlight. P pauses.',true));
 
-draw();
+resetGame();
+running = false;
 requestAnimationFrame(gameLoop);
