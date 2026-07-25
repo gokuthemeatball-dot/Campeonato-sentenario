@@ -16,6 +16,7 @@
   <header>
     <div class="wordmark"><span>NIGHT SHIFT</span><strong>AISLE 13</strong></div>
     <p>HOLLOWAY FAMILY MARKET · EMPLOYEE TERMINAL</p>
+    <button id="accessButton" type="button">Accessibility</button>
     <button id="helpButton" type="button">Controls</button>
   </header>
 
@@ -58,16 +59,6 @@
         <p>He hears running. He sees your flashlight. When the store goes quiet, listen for his keys.</p>
       </div>
 
-      <section class="access-card" aria-labelledby="accessTitle">
-        <span class="label">ACCESSIBILITY</span>
-        <h2 id="accessTitle">Play your way</h2>
-        <label><input id="narrationToggle" type="checkbox" checked /> Spoken game updates</label>
-        <label><input id="soundToggle" type="checkbox" checked /> Spatial danger sounds</label>
-        <label><input id="contrastToggle" type="checkbox" /> Extra-high contrast</label>
-        <button id="compassButton" type="button">Audio compass <kbd>C</kbd></button>
-        <button id="repeatButton" type="button">Repeat objective <kbd>Q</kbd></button>
-      </section>
-
       <section class="controls-card">
         <span class="label">CONTROLS</span>
         <div><kbd>← →</kbd><span>turn left or right</span></div>
@@ -93,16 +84,25 @@
   <div class="modal" id="startModal" role="dialog" aria-modal="true" aria-labelledby="startTitle">
     <div class="modal-card">
       <img class="start-art" src="aisle13-keyart.jpg" alt="A dark abandoned supermarket aisle with Mr. Hollow standing beneath failing fluorescent lights." />
-      <p class="kicker">CHAPTER ONE</p>
-      <h2 id="startTitle">THE LAST<br />CLOCK-OUT</h2>
-      <p>11:47 PM. The market is empty. Your manager should have gone home—but his keys are moving somewhere in Aisle 13.</p>
-      <div class="mission">
-        <b>YOUR ESCAPE PLAN</b>
-        <ol><li>Find the stockroom fuse.</li><li>Restore power and take the office keycard.</li><li>Reach the loading exit without being caught.</li></ol>
-      </div>
-      <label class="start-option"><input id="blindModeStart" type="checkbox" /> Audio-first mode: frequent spoken directions</label>
-      <button id="startButton" type="button">CLOCK IN <span>→</span></button>
-      <small>Headphones recommended. No jumpscare images; danger is announced by sound, text, and speech.</small>
+      <p class="kicker">NIGHT SHIFT</p>
+      <h2 id="startTitle">AISLE 13</h2>
+      <p>Mr. Hollow has hired you to clean the market after closing.</p>
+      <button id="startButton" type="button">START GAME <span>→</span></button>
+      <small>Headphones recommended.</small>
+    </div>
+  </div>
+
+  <div class="modal" id="accessModal" role="dialog" aria-modal="true" aria-labelledby="accessTitle" hidden>
+    <div class="modal-card access-card">
+      <span class="label">ACCESSIBILITY MENU</span>
+      <h2 id="accessTitle">Play your way</h2>
+      <label><input id="narrationToggle" type="checkbox" /> Spoken game updates</label>
+      <label><input id="soundToggle" type="checkbox" checked /> Spatial sounds and music</label>
+      <label><input id="contrastToggle" type="checkbox" /> Extra-high contrast</label>
+      <label><input id="blindModeStart" type="checkbox" /> Frequent spoken directions</label>
+      <button id="compassButton" type="button">Audio compass <kbd>C</kbd></button>
+      <button id="repeatButton" type="button">Repeat objective <kbd>Q</kbd></button>
+      <button id="closeAccessButton" type="button">DONE <span>→</span></button>
     </div>
   </div>
 
@@ -116,6 +116,6 @@
   </div>
 
   <p id="liveRegion" class="sr-only" aria-live="assertive" aria-atomic="true"></p>
-  <script src="script.js?v=33"></script>
+  <script src="script.js?v=34"></script>
 </body>
 </html>

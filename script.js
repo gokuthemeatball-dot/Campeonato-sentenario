@@ -18,6 +18,7 @@ const bossStart = { x: 28, y: 17 };
 const fuse = { x: 3, y: 17, name: 'stockroom fuse' };
 const keycard = { x: 28, y: 2, name: 'office keycard' };
 const exit = { x: 30, y: 18, name: 'loading exit' };
+const cleaningSpots = [{x:7,y:7},{x:16,y:12},{x:24,y:7}];
 const hideSpots = [{x:6,y:2},{x:25,y:17},{x:15,y:9},{x:5,y:11},{x:26,y:8}];
 const patrolPoints = [{x:28,y:3},{x:28,y:15},{x:21,y:17},{x:12,y:17},{x:3,y:12},{x:5,y:3},{x:16,y:9}];
 
@@ -48,12 +49,16 @@ let noiseTurns;
 let lastBossMove;
 let patrolIndex;
 let facing;
+let phase;
+let cleanedSpots;
+let themeTimer;
 let audioContext;
 let ambientGain;
 let lastAnnouncement = '';
 let blindMode = false;
 
 function resetGame() {
+  if(themeTimer){clearInterval(themeTimer);themeTimer=null;}
   player = {...playerStart};
   boss = {...bossStart};
   hasFuse = false;
@@ -68,6 +73,9 @@ function resetGame() {
   lastBossMove = 0;
   patrolIndex = 0;
   facing = 0;
+  phase = 'cleaning';
+  cleanedSpots = new Set();
+  powerOn = true;
   document.querySelector('#endModal').hidden = true;
   document.querySelector('#pauseCard').hidden = true;
   updateHud();
@@ -75,6 +83,7 @@ function resetGame() {
 }
 
 function objective() {
+  if (phase === 'cleaning') return `Clean the marked spills. ${cleaningSpots.length-cleanedSpots.size} remaining.`;
   if (!hasFuse) return 'Find the stockroom fuse in the southwest corner.';
   if (!powerOn) return 'Install the fuse at the breaker beside you.';
   if (!hasKey) return 'Find the office keycard in the northeast corner.';
@@ -105,6 +114,7 @@ function updateHud() {
   fuseItem.classList.toggle('found', hasFuse);
   keyItem.classList.toggle('found', hasKey);
   const distance = manhattan(player, boss);
+  if(phase==='cleaning'){dangerStatus.textContent='SHIFT: NORMAL';dangerStatus.style.color='#c7ff4a';return;}
   dangerStatus.textContent = distance <= 3 ? 'DANGER: CRITICAL' : distance <= 7 ? 'DANGER: NEAR' : 'DANGER: CLEAR';
   dangerStatus.style.color = distance <= 3 ? '#ff414d' : distance <= 7 ? '#ffc44a' : '#c7ff4a';
 }
@@ -158,6 +168,17 @@ function describeTile() {
 
 function interact() {
   if (!running || paused) return;
+  if (phase === 'cleaning') {
+    const spillIndex=cleaningSpots.findIndex((spot,index)=>!cleanedSpots.has(index)&&manhattan(player,spot)<=1);
+    if(spillIndex>=0){
+      cleanedSpots.add(spillIndex);
+      cleaningSound();
+      if(cleanedSpots.size===cleaningSpots.length)beginHorror();
+      else announce(`Spill cleaned. ${cleaningSpots.length-cleanedSpots.size} left.`,false);
+      updateHud();draw();
+      return;
+    }
+  }
   const hide = hideSpots.find(h => manhattan(player,h) <= 1);
   if (hidden) {
     hidden = false;
@@ -195,7 +216,8 @@ function interact() {
 
 function nearestImportant() {
   const targets = [];
-  if (!hasFuse) targets.push({...fuse,label:'Fuse'});
+  if (phase==='cleaning') cleaningSpots.forEach((spot,index)=>{if(!cleanedSpots.has(index))targets.push({...spot,label:'Spill'});});
+  else if (!hasFuse) targets.push({...fuse,label:'Fuse'});
   else if (!powerOn) targets.push({...fuse,label:'Breaker'});
   else if (!hasKey) targets.push({...keycard,label:'Keycard'});
   else targets.push({...exit,label:'Exit'});
@@ -208,16 +230,18 @@ function nearestImportant() {
 
 function audioCompass() {
   if (!running) return;
-  const goal = !hasFuse || !powerOn ? fuse : !hasKey ? keycard : exit;
-  const goalName = !hasFuse ? 'Fuse' : !powerOn ? 'Breaker' : !hasKey ? 'Keycard' : 'Exit';
+  const uncleaned=cleaningSpots.find((spot,index)=>!cleanedSpots.has(index));
+  const goal = phase==='cleaning' ? uncleaned : !hasFuse || !powerOn ? fuse : !hasKey ? keycard : exit;
+  const goalName = phase==='cleaning' ? 'Next spill' : !hasFuse ? 'Fuse' : !powerOn ? 'Breaker' : !hasKey ? 'Keycard' : 'Exit';
   const enemyDirection = directionWords(boss.x-player.x,boss.y-player.y);
-  announce(`${goalName}: ${directionWords(goal.x-player.x,goal.y-player.y)}, ${manhattan(player,goal)} steps. Mr. Hollow: ${enemyDirection}, ${manhattan(player,boss)} steps.`, true);
+  const dangerLine=phase==='cleaning'?'Mr. Hollow is in his office.':`Mr. Hollow: ${enemyDirection}, ${manhattan(player,boss)} steps.`;
+  announce(`${goalName}: ${directionWords(goal.x-player.x,goal.y-player.y)}, ${manhattan(player,goal)} steps. ${dangerLine}`, true);
   spatialCue(goal.x-player.x, 520);
-  setTimeout(()=>spatialCue(boss.x-player.x,110),280);
+  if(phase!=='cleaning')setTimeout(()=>spatialCue(boss.x-player.x,110),280);
 }
 
 function bossStep(time) {
-  if (!running || paused || time-lastBossMove < (powerOn ? 430 : 620)) return;
+  if (!running || paused || phase==='cleaning' || time-lastBossMove < (powerOn ? 430 : 620)) return;
   lastBossMove = time;
   const seesPlayer = manhattan(player,boss) <= (flashlight ? 7 : 4);
   let target;
@@ -261,6 +285,7 @@ function findPath(start,target) {
 function checkCaught(){if(!hidden&&player.x===boss.x&&player.y===boss.y)endGame(false);}
 function endGame(success){
   running=false;won=success;
+  if(themeTimer){clearInterval(themeTimer);themeTimer=null;}
   document.querySelector('#endKicker').textContent=success?'SHIFT SURVIVED':'SHIFT ENDED';
   document.querySelector('#endTitle').textContent=success?'YOU ESCAPED.':'CAUGHT.';
   document.querySelector('#endMessage').textContent=success?'The loading door slams behind you. From inside, Mr. Hollow quietly says: “See you tomorrow.”':'Mr. Hollow found you between the aisles. Listen, hide, and try a quieter route.';
@@ -277,7 +302,8 @@ function draw() {
     if(wall){ctx.strokeStyle='#3c4947';ctx.strokeRect(x*TILE+2,y*TILE+2,TILE-4,TILE-4);}
   }
   hideSpots.forEach(h=>drawMarker(h,'#50645f','H'));
-  if(!hasFuse)drawMarker(fuse,'#ffc44a','F');
+  if(phase==='cleaning')cleaningSpots.forEach((spot,index)=>{if(!cleanedSpots.has(index))drawMarker(spot,'#7fd9e8','CLEAN');});
+  if(phase!=='cleaning'&&!hasFuse)drawMarker(fuse,'#ffc44a','F');
   if(powerOn&&!hasKey)drawMarker(keycard,'#54cfff','K');
   drawMarker(exit,hasKey?'#c7ff4a':'#5a665f','EXIT');
   if(!hidden) {
@@ -288,10 +314,12 @@ function draw() {
   } else {
     ctx.fillStyle='#c7ff4a';ctx.font='bold 11px IBM Plex Mono';ctx.fillText('HIDDEN',player.x*TILE-4,player.y*TILE+5);
   }
-  const bx=boss.x*TILE+20,by=boss.y*TILE+20;
-  ctx.fillStyle='#1c2322';ctx.fillRect(bx-12,by-13,24,28);
-  ctx.fillStyle='#ff414d';ctx.fillRect(bx-8,by-6,5,3);ctx.fillRect(bx+3,by-6,5,3);
-  ctx.fillStyle='#e7ede9';ctx.fillRect(bx-2,by+2,4,13);
+  if(phase!=='cleaning'){
+    const bx=boss.x*TILE+20,by=boss.y*TILE+20;
+    ctx.fillStyle='#1c2322';ctx.fillRect(bx-12,by-13,24,28);
+    ctx.fillStyle='#ff414d';ctx.fillRect(bx-8,by-6,5,3);ctx.fillRect(bx+3,by-6,5,3);
+    ctx.fillStyle='#e7ede9';ctx.fillRect(bx-2,by+2,4,13);
+  }
   if(!powerOn){ctx.fillStyle='rgba(0,0,0,.62)';ctx.fillRect(0,0,canvas.width,canvas.height);}
   if(flashlight&&!hidden&&!powerOn){
     const gradient=ctx.createRadialGradient(player.x*TILE+20,player.y*TILE+20,10,player.x*TILE+20,player.y*TILE+20,150);
@@ -323,13 +351,30 @@ function ensureAudio(){
     oscillator.start();
   });
 }
+function cleaningSound(){tone(760,.07,-.2);setTimeout(()=>tone(920,.09,.2),90);setTimeout(()=>tone(1180,.12,0),190);}
+function powerFailureSound(){[520,410,300,180].forEach((frequency,index)=>setTimeout(()=>tone(frequency,.22,0),index*110));}
+function startTheme(){
+  if(themeTimer)clearInterval(themeTimer);
+  let beat=0;
+  themeTimer=setInterval(()=>{if(!running||paused||!soundToggle.checked)return;const notes=[82,82,110,73];tone(notes[beat%4],.18,beat%2?-.35:.35);if(beat%4===3)keyRattle(boss.x-player.x);beat++;},480);
+}
+function beginHorror(){
+  phase='escape';
+  powerOn=false;
+  boss={...bossStart};
+  noiseTurns=0;
+  powerFailureSound();
+  setTimeout(()=>tone(55,.7,0),430);
+  startTheme();
+  announce('The final spill is clean. The lights die. Mr. Hollow locks the doors. Find the stockroom fuse and escape.',true);
+}
 function tone(frequency,duration,pan=0){if(!soundToggle.checked)return;ensureAudio();const o=audioContext.createOscillator(),g=audioContext.createGain(),p=audioContext.createStereoPanner?audioContext.createStereoPanner():audioContext.createGain();o.frequency.value=frequency;o.type='triangle';g.gain.setValueAtTime(.055,audioContext.currentTime);g.gain.exponentialRampToValueAtTime(.001,audioContext.currentTime+duration);if('pan'in p)p.pan.value=Math.max(-1,Math.min(1,pan));o.connect(g).connect(p).connect(audioContext.destination);o.start();o.stop(audioContext.currentTime+duration);}
 function spatialCue(dx,frequency){tone(frequency,.13,Math.max(-1,Math.min(1,dx/5)));}
 function keyRattle(dx){[1480,1810,1320].forEach((f,i)=>setTimeout(()=>tone(f,.025,Math.max(-1,Math.min(1,dx/5))),i*42));}
 
 function gameLoop(time){bossStep(time);requestAnimationFrame(gameLoop);}
 window.addEventListener('keydown',event=>{
-  if(document.querySelector('#startModal').hidden===false)return;
+  if(document.querySelector('#startModal').hidden===false||document.querySelector('#accessModal').hidden===false)return;
   if(event.code==='ArrowUp'){event.preventDefault();moveFacing(false,event.shiftKey);}
   else if(event.code==='ArrowDown'){event.preventDefault();moveFacing(true,false);}
   else if(event.code==='ArrowLeft'){event.preventDefault();turnPlayer(-1);}
@@ -353,13 +398,15 @@ document.querySelector('#contrastToggle').addEventListener('change',event=>docum
 soundToggle.addEventListener('change',()=>{if(ambientGain)ambientGain.gain.setTargetAtTime(soundToggle.checked?.018:0,audioContext.currentTime,.08);});
 document.querySelector('#startButton').addEventListener('click',()=>{
   blindMode=document.querySelector('#blindModeStart').checked;
-  narrationToggle.checked=true;
   document.querySelector('#startModal').hidden=true;
   ensureAudio();resetGame();
   canvas.focus();
-  announce(`Night Shift begins. ${objective()} Press C at any time for the audio compass.`,true);
+  tone(660,.09,0);setTimeout(()=>tone(880,.14,0),110);
+  announce(`Mr. Hollow says: You're hired for the night shift. Start by cleaning the three marked spills.`,true);
 });
 document.querySelector('#restartButton').addEventListener('click',()=>{resetGame();announce(objective(),true);});
+document.querySelector('#accessButton').addEventListener('click',()=>{document.querySelector('#accessModal').hidden=false;});
+document.querySelector('#closeAccessButton').addEventListener('click',()=>{blindMode=document.querySelector('#blindModeStart').checked;document.querySelector('#accessModal').hidden=true;canvas.focus();});
 document.querySelector('#helpButton').addEventListener('click',()=>announce('Use left and right arrows to turn. Up walks forward. Down walks backward. Hold Shift and press Up to run. Press E to interact or hide. C gives directions. Q repeats the objective. F toggles the flashlight. P pauses.',true));
 
 resetGame();
