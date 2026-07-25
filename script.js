@@ -46,6 +46,7 @@ let hasFuse;
 let powerOn;
 let hasKey;
 let hidden;
+let crouching;
 let flashlight;
 let paused;
 let running;
@@ -77,6 +78,7 @@ function resetGame() {
   powerOn = false;
   hasKey = false;
   hidden = false;
+  crouching = false;
   flashlight = true;
   paused = false;
   running = true;
@@ -154,7 +156,7 @@ function movePlayer(dx, dy, quiet = false, energyCost = 1) {
   }
   player = next;
   energy=Math.max(0,energy-energyCost);
-  noiseTurns = quiet ? 0 : 2;
+  noiseTurns = quiet||crouching ? 0 : 2;
   footstepSound(dx);
   describeTile();
   updateHud();
@@ -175,8 +177,9 @@ function moveFacing(backward = false, run = false) {
   const vector = facingVectors[facing];
   const dx = vector.x * (backward ? -1 : 1);
   const dy = vector.y * (backward ? -1 : 1);
-  movePlayer(dx,dy,false,run?3:1);
-  if (run && running && !paused && !hidden) {
+  const actuallyRunning=run&&!crouching;
+  movePlayer(dx,dy,crouching,actuallyRunning?3:1);
+  if (actuallyRunning && running && !paused && !hidden) {
     noiseTurns = 5;
     movePlayer(dx,dy,false,3);
   }
@@ -224,6 +227,7 @@ function interact() {
   }
   if (hide) {
     hidden = true;
+    crouching = false;
     flashlight = false;
     announce('Hidden inside a supply cabinet. Mr. Hollow cannot see you. Press E to leave.', true);
     draw();
@@ -286,7 +290,8 @@ function bossStep(time) {
   if (!running || paused || phase==='cleaning' || time-lastBossMove < bossDelay) return;
   lastBossMove = time;
   if(time<bossStunnedUntil){dangerStatus.textContent='BOSS: STUNNED';dangerStatus.style.color='#54cfff';return;}
-  const seesPlayer = manhattan(player,boss) <= (flashlight ? (hasKey?9:6) : (hasKey?5:3));
+  const baseSight=flashlight ? (hasKey?9:6) : (hasKey?5:3);
+  const seesPlayer = manhattan(player,boss) <= Math.max(2,baseSight-(crouching?3:0));
   let target;
   if (seesPlayer || noiseTurns > 0) {
     target = player;
@@ -353,6 +358,7 @@ function draw() {
     const wall=walls.has(`${x},${y}`);
     ctx.fillStyle=wall?(powerOn?'#293231':'#171d1d'):((x+y)%2?'#101515':'#0d1212');
     ctx.fillRect(x*TILE,y*TILE,TILE,TILE);
+    if(!wall){ctx.strokeStyle='rgba(105,120,116,.06)';ctx.strokeRect(x*TILE,y*TILE,TILE,TILE);}
     if(wall){ctx.strokeStyle='#3c4947';ctx.strokeRect(x*TILE+2,y*TILE+2,TILE-4,TILE-4);}
   }
   hideSpots.forEach(h=>drawMarker(h,'#50645f','H'));
@@ -364,10 +370,11 @@ function draw() {
   if(powerOn&&!hasKey)drawMarker(keycard,'#54cfff','K');
   drawMarker(exit,hasKey?'#c7ff4a':'#5a665f','EXIT');
   if(!hidden) {
-    ctx.beginPath();ctx.fillStyle=flashlight?'#c7ff4a':'#9aa8a3';ctx.arc(player.x*TILE+20,player.y*TILE+20,11,0,Math.PI*2);ctx.fill();
+    ctx.beginPath();ctx.fillStyle=crouching?'#73827e':flashlight?'#c7ff4a':'#9aa8a3';ctx.arc(player.x*TILE+20,player.y*TILE+20,crouching?7:11,0,Math.PI*2);ctx.fill();
     ctx.strokeStyle='#fff';ctx.lineWidth=2;ctx.stroke();
     const face=facingVectors[facing];
     ctx.beginPath();ctx.moveTo(player.x*TILE+20,player.y*TILE+20);ctx.lineTo(player.x*TILE+20+face.x*18,player.y*TILE+20+face.y*18);ctx.strokeStyle='#07100d';ctx.lineWidth=4;ctx.stroke();
+    if(crouching){ctx.fillStyle='#b7c2be';ctx.font='8px IBM Plex Mono';ctx.fillText('CROUCHED',player.x*TILE-2,player.y*TILE+34);}
   } else {
     ctx.fillStyle='#c7ff4a';ctx.font='bold 11px IBM Plex Mono';ctx.fillText('HIDDEN',player.x*TILE-4,player.y*TILE+5);
   }
@@ -386,8 +393,10 @@ function draw() {
 }
 
 function drawMarker(point,color,label){
-  ctx.fillStyle=color;ctx.fillRect(point.x*TILE+6,point.y*TILE+6,TILE-12,TILE-12);
-  ctx.fillStyle='#07100d';ctx.font='bold 9px IBM Plex Mono';ctx.textAlign='center';ctx.fillText(label,point.x*TILE+20,point.y*TILE+24);ctx.textAlign='start';
+  const cx=point.x*TILE+20,cy=point.y*TILE+20;
+  ctx.fillStyle='rgba(4,8,8,.82)';ctx.beginPath();ctx.arc(cx,cy,13,0,Math.PI*2);ctx.fill();
+  ctx.strokeStyle=color;ctx.lineWidth=2;ctx.stroke();
+  ctx.fillStyle='#d6dfdb';ctx.font='bold 7px IBM Plex Mono';ctx.textAlign='center';ctx.fillText(label,cx,cy+3);ctx.textAlign='start';
 }
 function areaName(p){if(p.y<=3)return p.x>=23?'Manager office hall':'Front checkout';if(p.y>=15)return p.x<=9?'Stockroom':p.x>=23?'Loading bay':'Back aisle';return `Aisle ${Math.max(1,Math.floor(p.x/2))}`;}
 function directionWords(dx,dy){const vertical=dy<0?'north':dy>0?'south':'';const horizontal=dx<0?'west':dx>0?'east':'';return vertical&&horizontal?`${vertical}-${horizontal}`:vertical||horizontal||'here';}
@@ -439,8 +448,8 @@ function impactSound(){noiseBurst(.3,.09,0);tone(58,.45,0);}
 function powerFailureSound(){[520,410,300,180].forEach((frequency,index)=>setTimeout(()=>tone(frequency,.22,0),index*110));}
 function startStoreMusic(){
   if(themeTimer)clearInterval(themeTimer);
-  let note=0;const melody=[392,494,440,330,392,523,494,330];
-  themeTimer=setInterval(()=>{if(!running||paused||!soundToggle.checked)return;tone(melody[note%melody.length],.22,note%2?-.25:.25);if(note%4===0)tone(196,.3,0);note++;},620);
+  let pulse=0;const drones=[98,103,92,87];
+  themeTimer=setInterval(()=>{if(!running||paused||!soundToggle.checked)return;tone(drones[pulse%4],.85,pulse%2?-.35:.35);if(pulse%3===0)noiseBurst(.18,.012,0);pulse++;},1100);
 }
 function startTheme(){
   if(themeTimer)clearInterval(themeTimer);
@@ -473,6 +482,7 @@ window.addEventListener('keydown',event=>{
   else if(event.code==='KeyQ'){event.preventDefault();announce(objective(),true);}
   else if(event.code==='KeyF'){event.preventDefault();flashlight=!flashlight;announce(`Flashlight ${flashlight?'on':'off'}.`,true);flashlightSound();draw();}
   else if(event.code==='KeyB'){event.preventDefault();useStunBottle();}
+  else if(event.code==='KeyH'){event.preventDefault();if(!hidden){crouching=!crouching;announce(crouching?'Crouched. You can move quietly and are harder to see.':'Standing. You move normally again.',true);draw();}}
   else if(event.code==='KeyP'){event.preventDefault();paused=!paused;document.querySelector('#pauseCard').hidden=!paused;announce(paused?'Game paused.':'Game resumed.',true);}
 },{capture:true});
 document.querySelectorAll('[data-move]').forEach(button=>button.addEventListener('click',()=>{
@@ -498,7 +508,7 @@ document.querySelector('#startButton').addEventListener('click',()=>{
 document.querySelector('#restartButton').addEventListener('click',()=>{resetGame();startStoreMusic();announce(objective(),true);});
 document.querySelector('#accessButton').addEventListener('click',()=>{document.querySelector('#accessModal').hidden=false;});
 document.querySelector('#closeAccessButton').addEventListener('click',()=>{blindMode=document.querySelector('#blindModeStart').checked;document.querySelector('#accessModal').hidden=true;canvas.focus();});
-document.querySelector('#helpButton').addEventListener('click',()=>announce('Left and right arrows turn. Up walks forward. Down walks backward. Shift plus Up runs. E interacts, collects, or eats. B throws a crafted stun bottle. F toggles the flashlight. P pauses.',true));
+document.querySelector('#helpButton').addEventListener('click',()=>announce('Left and right arrows turn. Up walks forward. Down walks backward. Shift plus Up runs. H toggles mobile crouch stealth. E uses cabinets, collects, or eats. B throws a crafted stun bottle. F toggles the flashlight. P pauses.',true));
 
 resetGame();
 running = false;
