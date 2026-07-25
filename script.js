@@ -9,6 +9,7 @@ const energyStatus = document.querySelector('#energyStatus');
 const fuseItem = document.querySelector('#fuseItem');
 const keyItem = document.querySelector('#keyItem');
 const foodItem = document.querySelector('#foodItem');
+const clueItem = document.querySelector('#clueItem');
 const craftItem = document.querySelector('#craftItem');
 const mapItem = document.querySelector('#mapItem');
 const lureItem = document.querySelector('#lureItem');
@@ -41,6 +42,13 @@ const handleSpot = {x:11,y:16};
 const tapeSpot = {x:29,y:6};
 const ragSpot = {x:18,y:12};
 const coffeeSpot = {x:6,y:7};
+const clueSpots = [{x:2,y:15},{x:15,y:2},{x:22,y:16},{x:29,y:11}];
+const clueTexts = [
+  'A timecard dated 1987. Every employee clocked out except one. The missing name is scratched away.',
+  'A staff photograph shows Mr. Hollow in the same green vest. The photograph is dated forty years ago.',
+  'A damaged training tape says: If the manager learns your route, change it. He remembers repeated footsteps.',
+  'The night ledger already contains your name. It lists every shift you will work for the next thirteen years.'
+];
 const hideSpots = [{x:6,y:2},{x:25,y:17},{x:15,y:9},{x:5,y:11},{x:26,y:8}];
 const patrolPoints = [{x:28,y:3},{x:28,y:15},{x:21,y:17},{x:12,y:17},{x:3,y:12},{x:5,y:3},{x:16,y:9}];
 
@@ -110,6 +118,11 @@ let customersServed;
 let dialogueSteps;
 let dialogueIndex;
 let dialogueOnDone;
+let foundClues;
+let lastKnownPlayer;
+let huntMemory;
+let bossSearching;
+let lastAmbush;
 let audioContext;
 let ambientGain;
 let lastAnnouncement = '';
@@ -169,6 +182,11 @@ function resetGame() {
   dialogueSteps = [];
   dialogueIndex = 0;
   dialogueOnDone = null;
+  foundClues = new Set();
+  lastKnownPlayer = {...playerStart};
+  huntMemory = 0;
+  bossSearching = false;
+  lastAmbush = 0;
   powerOn = true;
   document.querySelector('#endModal').hidden = true;
   document.querySelector('#storyModal').hidden = true;
@@ -242,6 +260,8 @@ function updateHud() {
   fuseItem.textContent = `FUSE ${hasFuse ? '●' : '○'}`;
   keyItem.textContent = `KEYCARD ${hasKey ? '●' : '○'}`;
   foodItem.textContent=`FOOD ×${foodPortions}`;
+  clueItem.textContent=`MYSTERY ${foundClues.size}/4`;
+  clueItem.classList.toggle('found',foundClues.size>0);
   fuseItem.classList.toggle('found', hasFuse);
   keyItem.classList.toggle('found', hasKey);
   craftItem.textContent=`STUN BOTTLE ${hasStunBottle?'●':'○'}`;
@@ -371,6 +391,13 @@ function interact() {
   if(phase==='escape'&&!hasTape&&manhattan(player,tapeSpot)<=1){hasTape=true;pickupSound();announce('Duct tape collected. Find a broken handle for a door jammer.',false);tryCraftJammer();updateHud();draw();return;}
   if(phase==='escape'&&!hasRag&&manhattan(player,ragSpot)<=1){hasRag=true;pickupSound();announce('Cleaning rag collected. Find coffee grounds for a scent mask.',false);tryCraftMask();updateHud();draw();return;}
   if(phase==='escape'&&!hasCoffee&&manhattan(player,coffeeSpot)<=1){hasCoffee=true;pickupSound();announce('Coffee grounds collected. Find a cleaning rag for a scent mask.',false);tryCraftMask();updateHud();draw();return;}
+  const clueIndex=phase==='escape'?clueSpots.findIndex((spot,index)=>!foundClues.has(index)&&manhattan(player,spot)<=1):-1;
+  if(clueIndex>=0){
+    foundClues.add(clueIndex);
+    tapeGlitchSound();
+    announce(`Mystery fragment ${foundClues.size} of 4. ${clueTexts[clueIndex]}`,true);
+    updateHud();draw();return;
+  }
   const hide = hideSpots.find(h => manhattan(player,h) <= 1);
   if (hidden) {
     hidden = false;
@@ -430,6 +457,7 @@ function nearestImportant() {
   if(phase==='escape'&&!hasTape)targets.push({...tapeSpot,label:'Duct tape'});
   if(phase==='escape'&&!hasRag)targets.push({...ragSpot,label:'Rag'});
   if(phase==='escape'&&!hasCoffee)targets.push({...coffeeSpot,label:'Coffee'});
+  if(phase==='escape')clueSpots.forEach((spot,index)=>{if(!foundClues.has(index))targets.push({...spot,label:'Mystery fragment'});});
   targets.sort((a,b)=>manhattan(player,a)-manhattan(player,b));
   const target = targets[0];
   const dx=target.x-player.x,dy=target.y-player.y;
@@ -449,22 +477,48 @@ function audioCompass() {
 }
 
 function bossStep(time) {
-  const bossDelay=Math.max(550,(hasKey?700:powerOn?1000:1400)-catches*80);
+  const bossDelay=Math.max(430,(hasKey?620:powerOn?850:1150)-catches*90-foundClues.size*15);
   if (!running || paused || phase!=='escape' || time-lastBossMove < bossDelay) return;
   lastBossMove = time;
   if(time<bossStunnedUntil){dangerStatus.textContent='BOSS: STUNNED';dangerStatus.style.color='#54cfff';return;}
   const baseSight=flashlight ? (hasKey?9:6) : (hasKey?5:3);
   const scentMasked = time < scentMaskUntil;
-  const seesPlayer = manhattan(player,boss) <= Math.max(scentMasked?1:2,baseSight-(crouching?3:0)-(scentMasked?4:0));
+  const seesPlayer = !hidden&&manhattan(player,boss) <= Math.max(scentMasked?1:2,baseSight-(crouching?3:0)-(scentMasked?4:0));
+  const distanceBeforeMove=manhattan(player,boss);
+  if(distanceBeforeMove>7&&Math.random()<.08)return;
+  if(time-lastAmbush>14000&&distanceBeforeMove>14&&Math.random()<.14){
+    const ambushPoints=patrolPoints.filter(point=>{const distance=manhattan(player,point);return distance>=7&&distance<=12;});
+    if(ambushPoints.length){
+      boss={...ambushPoints[Math.floor(Math.random()*ambushPoints.length)]};
+      lastAmbush=time;
+      patrolIndex=Math.floor(Math.random()*patrolPoints.length);
+      if(blindMode)announce('The store falls silent. Mr. Hollow’s location is unknown.',true);
+    }
+  }
   let target;
   if(lureTurns>0&&lureTarget){
-    target=lureTarget;lureTurns--;
+    target=lureTarget;lureTurns--;bossSearching=false;
+  } else if(hidden&&(bossSearching||Math.random()<(hasKey ? .3 : .18))) {
+    target=player;
+    bossSearching=true;
   } else if (seesPlayer || noiseTurns > 0) {
-    target = player;
+    lastKnownPlayer={...player};
+    huntMemory=5+Math.floor(Math.random()*5);
+    target = lastKnownPlayer;
+    bossSearching=false;
     noiseTurns = Math.max(0,noiseTurns-1);
+  } else if(huntMemory>0) {
+    target=lastKnownPlayer;
+    huntMemory--;
+    bossSearching=false;
   } else {
     target = patrolPoints[patrolIndex];
-    if (manhattan(boss,target) <= 1) patrolIndex=(patrolIndex+1)%patrolPoints.length;
+    bossSearching=false;
+    if (manhattan(boss,target) <= 1) {
+      let nextIndex=patrolIndex;
+      while(nextIndex===patrolIndex)nextIndex=Math.floor(Math.random()*patrolPoints.length);
+      patrolIndex=nextIndex;
+    }
   }
   const path = findPath(boss,target);
   const bossBeforeMove = {...boss};
@@ -508,7 +562,13 @@ function findPath(start,target) {
 }
 
 function checkCaught(){
-  if(hidden||player.x!==boss.x||player.y!==boss.y)return;
+  if(player.x!==boss.x||player.y!==boss.y)return;
+  if(hidden&&!bossSearching)return;
+  if(hidden&&bossSearching){
+    hidden=false;
+    cabinetRipSound();
+    announce('The cabinet door is ripped open. Mr. Hollow found your hiding place.',true);
+  }
   catches++;
   triggerJumpScare(catches>=3?'CAUGHT.':'HE FOUND YOU.',true);
   if(catches>=3){endGame(false);return;}
@@ -517,6 +577,8 @@ function checkCaught(){
   boss={...bossStart};
   flashlight=false;
   noiseTurns=0;
+  huntMemory=0;
+  bossSearching=false;
   announce(`Mr. Hollow grabbed you, but you broke free. ${3-catches} chance${3-catches===1?'':'s'} left. He is getting faster.`,true);
   updateHud();draw();
 }
@@ -555,6 +617,7 @@ function draw() {
   if(phase==='escape'&&!hasTape)drawMarker(tapeSpot,'#bdc7c4','TAPE');
   if(phase==='escape'&&!hasRag)drawMarker(ragSpot,'#9aaea8','RAG');
   if(phase==='escape'&&!hasCoffee)drawMarker(coffeeSpot,'#9b6948','COFFEE');
+  if(phase==='escape')clueSpots.forEach((spot,index)=>{if(!foundClues.has(index))drawMarker(spot,'#ff6b84','?');});
   if(phase==='escape'&&!hasFuse)drawMarker(fuse,'#ffc44a','F');
   if(phase==='escape'&&powerOn&&!hasKey)drawMarker(keycard,'#54cfff','K');
   if(phase==='escape')drawMarker(exit,hasKey?'#c7ff4a':'#5a665f','EXIT');
@@ -635,6 +698,8 @@ function flashlightSound(){noiseBurst(.025,.06,0);tone(flashlight?1250:480,.035,
 function eatSound(){noiseBurst(.16,.045,0);tone(330,.08,0);setTimeout(()=>tone(440,.12,0),120);}
 function heartbeatSound(distance){tone(54,.08,0);setTimeout(()=>tone(47,.1,0),120+distance*18);}
 function pickupSound(){tone(720,.06,-.2);setTimeout(()=>tone(980,.09,.2),70);}
+function tapeGlitchSound(){noiseBurst(.28,.06,-.3);setTimeout(()=>tone(930,.07,.3),90);setTimeout(()=>noiseBurst(.18,.045,0),170);}
+function cabinetRipSound(){noiseBurst(.55,.13,0);tone(73,.4,0);setTimeout(()=>noiseBurst(.3,.1,0),120);}
 function tryCraft(){
   if(!hasBottle||!hasCleaner||hasStunBottle)return;
   hasStunBottle=true;
@@ -712,6 +777,11 @@ function beginHorror(){
   foodPortions=3;
   boss={...bossStart};
   noiseTurns=0;
+  lastKnownPlayer={...player};
+  huntMemory=0;
+  bossSearching=false;
+  lastAmbush=performance.now();
+  lastFearEvent=performance.now();
   powerFailureSound();
   setTimeout(()=>tone(55,.7,0),430);
   startTheme();
@@ -736,7 +806,22 @@ function triggerJumpScare(text='RUN.',force=false){
 function fearEvent(time){
   if(!running||paused||phase!=='escape'||time-lastFearEvent<8000)return;
   lastFearEvent=time+Math.random()*5000;flickerUntil=time+350+Math.random()*500;
-  if(Math.random()<.5){noiseBurst(.42,.075,boss.x>player.x?1:-1);tone(42,.55,0);}else keyRattle(boss.x-player.x);
+  const eventRoll=Math.random();
+  if(eventRoll<.34){
+    const fakePan=boss.x>player.x?-1:1;
+    [86,72,91].forEach((frequency,index)=>setTimeout(()=>{noiseBurst(.11,.04,fakePan);tone(frequency,.09,fakePan);},index*190));
+  }else if(eventRoll<.68){
+    keyRattle(boss.x-player.x);
+  }else{
+    const messages=[
+      'Store speaker: Cleanup required in aisle thirteen. No aisle thirteen appears on the map.',
+      'Store speaker: The building is now closed. One customer remains.',
+      'Store speaker: Employee attendance corrected. No one is permitted to leave.',
+      'A child’s voice whispers through the speaker: He changes when the lights go out.'
+    ];
+    const message=messages[Math.floor(Math.random()*messages.length)];
+    noiseBurst(.32,.055,0);setTimeout(()=>announce(message,true),180);
+  }
   draw();setTimeout(()=>{if(running)draw();},900);
 }
 function gameLoop(time){bossStep(time);fearEvent(time);requestAnimationFrame(gameLoop);}
