@@ -243,6 +243,8 @@ function objective() {
   if (phase === 'intro') return 'Listen to Mr. Hollow’s instructions.';
   if (phase === 'customers') return `Serve customers at the front checkout. ${customersServed} of 3 served.`;
   if (phase === 'cleaning') return `Clean the marked spills. ${cleaningSpots.length-cleanedSpots.size} remaining.`;
+  const lostMemories=memorySideTaskActive?memoryFragments.filter(fragment=>!fragment.recovered).length:0;
+  if(lostMemories>0)return `Recover your lost memories before escaping. ${lostMemories} remaining.`;
   if (!hasFuse) return 'Find the stockroom fuse in the southwest corner.';
   if (!powerOn) return 'Install the fuse at the breaker beside you.';
   if (!hasKey) return 'Find the office keycard in the northeast corner.';
@@ -305,7 +307,7 @@ function updateHud() {
   chanceItem.textContent=`CHANCES ×${Math.max(0,6-catches)}`;
   chanceItem.style.color=catches>=5?'#ff414d':catches>=3?'#ffc44a':'';
   const restoredMemories=memoryFragments.filter(fragment=>fragment.recovered).length;
-  memoryItem.textContent=!memoryFragments.length?'MEMORY STABLE':memorySideTaskActive?`MEMORY ${restoredMemories}/${memoryFragments.length}`:'MEMORY FADING';
+  memoryItem.textContent=!memoryFragments.length?'MEMORY STABLE':memorySideTaskActive?`MEMORY REQUIRED ${restoredMemories}/${memoryFragments.length}`:'MEMORY FADING';
   memoryItem.classList.toggle('found',memoryFragments.length>0&&restoredMemories===memoryFragments.length);
   fuseItem.textContent = `FUSE ${hasFuse ? '●' : '○'}`;
   keyItem.textContent = `KEYCARD ${hasKey ? '●' : '○'}`;
@@ -492,7 +494,9 @@ function interact() {
     hasKey = true;
     announce('Office keycard collected. Mr. Hollow enters his enraged phase. Reach the loading exit southeast.', true);
   } else if (hasKey && manhattan(player,exit) <= 1) {
-    endGame(true);
+    const lostMemories=memorySideTaskActive?memoryFragments.filter(fragment=>!fragment.recovered).length:0;
+    if(lostMemories>0)announce(`You cannot leave without your memories. ${lostMemories} fragment${lostMemories===1?' remains':'s remain'}. Use the audio compass to find them.`,true);
+    else endGame(true);
   } else {
     const near = nearestImportant();
     announce(`Nothing to use here. ${near.text}`, true);
@@ -502,6 +506,13 @@ function interact() {
 }
 
 function nearestImportant() {
+  const requiredMemories=phase==='escape'&&memorySideTaskActive?memoryFragments.filter(fragment=>!fragment.recovered):[];
+  if(requiredMemories.length){
+    requiredMemories.sort((a,b)=>manhattan(player,a)-manhattan(player,b));
+    const memory=requiredMemories[0];
+    const dx=memory.x-player.x,dy=memory.y-player.y;
+    return {distance:manhattan(player,memory),text:`Required lost memory is ${directionWords(dx,dy)}, ${manhattan(player,memory)} steps away.`};
+  }
   const targets = [];
   if(phase==='customers')targets.push({...checkoutSpot,label:'Checkout'});
   else if (phase==='cleaning') cleaningSpots.forEach((spot,index)=>{if(!cleanedSpots.has(index))targets.push({...spot,label:'Spill'});});
@@ -650,7 +661,7 @@ function checkCaught(){
   huntMemory=0;
   bossSearching=false;
   const chancesLeft=6-catches;
-  const memoryMessage=memorySideTaskActive?' Lost pieces of your memory remain where he caught you. Recover them as an optional side task by finding them and pressing E.':' Something from the encounter is already becoming difficult to remember.';
+  const memoryMessage=memorySideTaskActive?' Lost pieces of your memory remain where he caught you. You must recover every fragment by finding it and pressing E before you can escape.':' Something from the encounter is already becoming difficult to remember.';
   announce(`Mr. Hollow grabbed you, but you broke free. ${chancesLeft} chance${chancesLeft===1?'':'s'} left. He is getting faster.${memoryMessage}`,true);
   updateHud();draw();
 }
