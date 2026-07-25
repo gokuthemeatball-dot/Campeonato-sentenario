@@ -10,6 +10,7 @@
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
   <link href="https://fonts.googleapis.com/css2?family=Barlow+Condensed:wght@600;700;800;900&family=IBM+Plex+Mono:wght@400;500;600&display=swap" rel="stylesheet" />
   <link rel="stylesheet" href="style.css?v=32" />
+  <link rel="stylesheet" href="horror-mobile.css?v=42" />
   <style>.inventory div{flex-wrap:wrap}.inventory{max-width:65%}</style>
 </head>
 <body>
@@ -88,8 +89,22 @@
       <button data-move="down" aria-label="Walk backward">▼</button>
       <button data-move="right" aria-label="Turn right">▶</button>
     </div>
-    <button id="touchInteract" class="touch-action">INTERACT</button>
+    <div class="touch-actions">
+      <button id="touchInteract" class="primary-touch">INTERACT</button>
+      <button data-action="flashlight" aria-label="Toggle flashlight">LIGHT</button>
+      <button data-action="crouch" aria-label="Toggle crouch">CROUCH</button>
+      <button data-action="compass" aria-label="Audio compass">LISTEN</button>
+      <button data-action="food" aria-label="Eat carried food">EAT</button>
+      <button data-action="camera" aria-label="Use flash camera">CAMERA</button>
+      <button data-action="jammer" aria-label="Place door jammer">JAMMER</button>
+      <button data-action="mask" aria-label="Use scent mask">MASK</button>
+    </div>
   </section>
+
+  <div id="jumpScare" class="jump-scare" aria-hidden="true" hidden>
+    <img src="mr-hollow.jpg" alt="" />
+    <strong id="jumpScareText">RUN.</strong>
+  </div>
 
   <div class="modal" id="startModal" role="dialog" aria-modal="true" aria-labelledby="startTitle">
     <div class="modal-card">
@@ -128,6 +143,6 @@
   </div>
 
   <p id="liveRegion" class="sr-only" aria-live="assertive" aria-atomic="true"></p>
-  <script src="script.js?v=41"></script>
+  <script src="script.js?v=42"></script>
 </body>
 </html>

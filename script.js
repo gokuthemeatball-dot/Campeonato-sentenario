@@ -104,6 +104,7 @@ let hasScentMask;
 let scentMaskUntil;
 let flickerUntil;
 let lastFearEvent;
+let lastJumpScare;
 let audioContext;
 let ambientGain;
 let lastAnnouncement = '';
@@ -158,6 +159,7 @@ function resetGame() {
   scentMaskUntil = 0;
   flickerUntil = 0;
   lastFearEvent = 0;
+  lastJumpScare = -20000;
   powerOn = true;
   document.querySelector('#endModal').hidden = true;
   document.querySelector('#pauseCard').hidden = true;
@@ -407,10 +409,12 @@ function bossStep(time) {
     announce('Mr. Hollow hits the door jammer. The aisle shakes, but the pursuit stops for seven seconds.',true);
   }
   const distance = manhattan(player,boss);
+  bossFootstepSound(distance,boss.x-player.x);
   if (distance <= 6) {
     spatialCue(boss.x-player.x, distance <= 2 ? 75 : 105);
     if(distance<=4)heartbeatSound(distance);
     if (Math.random() < .18) keyRattle(boss.x-player.x);
+    if(distance<=3&&time-lastJumpScare>11000&&Math.random()<.16)triggerJumpScare('DON’T MOVE.',false);
     if (blindMode && distance === 3) announce(`Danger. Mr. Hollow is ${directionWords(boss.x-player.x,boss.y-player.y)}, three steps away.`,true);
   }
   updateHud();
@@ -438,6 +442,7 @@ function findPath(start,target) {
 function checkCaught(){
   if(hidden||player.x!==boss.x||player.y!==boss.y)return;
   catches++;
+  triggerJumpScare(catches>=3?'CAUGHT.':'HE FOUND YOU.',true);
   if(catches>=3){endGame(false);return;}
   impactSound();
   player={...playerStart};
@@ -546,6 +551,15 @@ function noiseBurst(duration=.08,volume=.035,pan=0){
   source.buffer=buffer;gain.gain.value=volume;if('pan'in p)p.pan.value=Math.max(-1,Math.min(1,pan));source.connect(gain).connect(p).connect(audioContext.destination);source.start();
 }
 function footstepSound(pan=0){noiseBurst(.075,.028,pan);tone(105+Math.random()*24,.055,pan);}
+function bossFootstepSound(distance,dx){
+  if(!soundToggle.checked||distance>14)return;
+  const pan=Math.max(-1,Math.min(1,dx/6));
+  const closeness=Math.max(0,1-distance/15);
+  noiseBurst(.13,.025+closeness*.065,pan);
+  tone(48+Math.random()*8,.13+closeness*.07,pan);
+  setTimeout(()=>{noiseBurst(.055,.018+closeness*.038,pan);tone(72,.045,pan);},85);
+  if(distance<=6)setTimeout(()=>keyRattle(dx),150);
+}
 function cleaningSound(){noiseBurst(.38,.045,0);tone(540,.12,-.2);setTimeout(()=>noiseBurst(.28,.035,.2),150);setTimeout(()=>tone(880,.11,0),310);}
 function flashlightSound(){noiseBurst(.025,.06,0);tone(flashlight?1250:480,.035,0);setTimeout(()=>tone(flashlight?760:260,.045,0),38);}
 function eatSound(){noiseBurst(.16,.045,0);tone(330,.08,0);setTimeout(()=>tone(440,.12,0),120);}
@@ -636,6 +650,18 @@ function beginHorror(){
 function tone(frequency,duration,pan=0){if(!soundToggle.checked)return;ensureAudio();const o=audioContext.createOscillator(),g=audioContext.createGain(),p=audioContext.createStereoPanner?audioContext.createStereoPanner():audioContext.createGain();o.frequency.value=frequency;o.type='triangle';g.gain.setValueAtTime(.055,audioContext.currentTime);g.gain.exponentialRampToValueAtTime(.001,audioContext.currentTime+duration);if('pan'in p)p.pan.value=Math.max(-1,Math.min(1,pan));o.connect(g).connect(p).connect(audioContext.destination);o.start();o.stop(audioContext.currentTime+duration);}
 function spatialCue(dx,frequency){tone(frequency,.13,Math.max(-1,Math.min(1,dx/5)));}
 function keyRattle(dx){[1480,1810,1320].forEach((f,i)=>setTimeout(()=>tone(f,.025,Math.max(-1,Math.min(1,dx/5))),i*42));}
+function triggerJumpScare(text='RUN.',force=false){
+  const now=performance.now();
+  if(!force&&now-lastJumpScare<10000)return;
+  lastJumpScare=now;
+  const scare=document.querySelector('#jumpScare');
+  document.querySelector('#jumpScareText').textContent=text;
+  scare.hidden=false;
+  document.body.classList.add('danger-flash');
+  noiseBurst(.42,.16,boss.x>player.x?1:-1);
+  [48,39,61,32].forEach((frequency,index)=>setTimeout(()=>tone(frequency,.28,0),index*65));
+  setTimeout(()=>{scare.hidden=true;document.body.classList.remove('danger-flash');},force?760:420);
+}
 
 function fearEvent(time){
   if(!running||paused||phase==='cleaning'||time-lastFearEvent<8000)return;
@@ -669,6 +695,16 @@ document.querySelectorAll('[data-move]').forEach(button=>button.addEventListener
   if(action==='up')moveFacing(false,false);
   else if(action==='down')moveFacing(true,false);
   else turnPlayer(action==='left'?-1:1);
+}));
+document.querySelectorAll('[data-action]').forEach(button=>button.addEventListener('click',()=>{
+  const action=button.dataset.action;
+  if(action==='flashlight'){flashlight=!flashlight;announce(`Flashlight ${flashlight?'on':'off'}.`,true);flashlightSound();draw();}
+  else if(action==='crouch'&&!hidden){crouching=!crouching;announce(crouching?'Crouched. You move quietly.':'Standing.',true);draw();}
+  else if(action==='compass')audioCompass();
+  else if(action==='food')eatCarriedFood();
+  else if(action==='camera')useFlashCamera();
+  else if(action==='jammer')placeJammer();
+  else if(action==='mask')useScentMask();
 }));
 document.querySelector('#touchInteract').addEventListener('click',interact);
 document.querySelector('#compassButton').addEventListener('click',audioCompass);
