@@ -5,7 +5,14 @@
   <meta name="viewport" content="width=device-width, initial-scale=1" />
   <meta name="theme-color" content="#080b0c" />
   <meta name="description" content="Night Shift: Aisle 13 — a supermarket survival-horror game for everyone, fully playable with or without sight." />
+  <meta name="application-name" content="Aisle 13" />
+  <meta name="apple-mobile-web-app-capable" content="yes" />
+  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
+  <meta name="apple-mobile-web-app-title" content="Aisle 13" />
   <title>Night Shift: Aisle 13</title>
+  <link rel="manifest" href="manifest.webmanifest" />
+  <link rel="icon" href="app-icon.svg" type="image/svg+xml" />
+  <link rel="apple-touch-icon" href="app-icon-192.png" />
   <link rel="preconnect" href="https://fonts.googleapis.com" />
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
   <link href="https://fonts.googleapis.com/css2?family=Barlow+Condensed:wght@600;700;800;900&family=IBM+Plex+Mono:wght@400;500;600&display=swap" rel="stylesheet" />
@@ -20,6 +27,7 @@
     <p>SURVIVAL HORROR · PLAYABLE WITH OR WITHOUT SIGHT</p>
     <button id="accessButton" type="button">Accessibility</button>
     <button id="helpButton" type="button">Controls</button>
+    <button id="installButton" type="button" hidden>Install App</button>
   </header>
 
   <main>
@@ -153,6 +161,6 @@
   </div>
 
   <p id="liveRegion" class="sr-only" aria-live="assertive" aria-atomic="true"></p>
-  <script src="script.js?v=55"></script>
+  <script src="script.js?v=56"></script>
 </body>
 </html>

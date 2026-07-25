@@ -20,6 +20,7 @@ const wedgeItem = document.querySelector('#wedgeItem');
 const maskItem = document.querySelector('#maskItem');
 const narrationToggle = document.querySelector('#narrationToggle');
 const soundToggle = document.querySelector('#soundToggle');
+const installButton = document.querySelector('#installButton');
 const dangerMusic = new Audio('danger-song.mp3?v=51');
 dangerMusic.loop = true;
 dangerMusic.preload = 'auto';
@@ -157,6 +158,7 @@ let audioContext;
 let ambientGain;
 let lastAnnouncement = '';
 let blindMode = false;
+let deferredInstallPrompt = null;
 
 function resetGame() {
   stopDangerMusic(true);
@@ -1195,6 +1197,20 @@ document.querySelector('#restartButton').addEventListener('click',()=>{resetGame
 document.querySelector('#accessButton').addEventListener('click',()=>{document.querySelector('#accessModal').hidden=false;});
 document.querySelector('#closeAccessButton').addEventListener('click',()=>{blindMode=document.querySelector('#blindModeStart').checked;document.querySelector('#accessModal').hidden=true;canvas.focus();});
 document.querySelector('#helpButton').addEventListener('click',()=>announce('Arrows move and turn. H crouches. E interacts. R eats food. B throws a stun bottle. M uses the map. N deploys a noise lure. X fires the flash camera. V places a door jammer. Z uses the scent mask. F toggles the flashlight. P pauses.',true));
+window.addEventListener('beforeinstallprompt',event=>{
+  event.preventDefault();
+  deferredInstallPrompt=event;
+  installButton.hidden=false;
+});
+installButton.addEventListener('click',async()=>{
+  if(!deferredInstallPrompt)return;
+  deferredInstallPrompt.prompt();
+  const choice=await deferredInstallPrompt.userChoice;
+  if(choice.outcome==='accepted')installButton.hidden=true;
+  deferredInstallPrompt=null;
+});
+window.addEventListener('appinstalled',()=>{installButton.hidden=true;deferredInstallPrompt=null;});
+if('serviceWorker'in navigator)window.addEventListener('load',()=>navigator.serviceWorker.register('./sw.js').catch(()=>{}));
 
 resetGame();
 running = false;
