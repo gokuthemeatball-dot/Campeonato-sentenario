@@ -9,6 +9,12 @@
 .jump-scare::after{content:"";position:absolute;inset:0;background:radial-gradient(circle,transparent 5%,#52000888 42%,#000 78%);animation:scarePulse .16s alternate infinite}
 .jump-scare strong{position:absolute;z-index:2;bottom:10%;font:900 clamp(60px,16vw,180px)/.8 "Barlow Condensed";letter-spacing:.08em;color:#fff;text-shadow:0 0 12px #f00,8px 5px #900}
 .danger-flash .canvas-wrap{box-shadow:0 0 0 2px #ff414d,0 0 40px #8a000088}
+.story-card{display:grid;grid-template-columns:150px 1fr;column-gap:22px;align-items:start}
+.story-card img{grid-row:1/5;width:150px;height:210px;object-fit:cover;object-position:center 20%;filter:contrast(1.15) saturate(.65);border:1px solid #43504d}
+.story-card .label{margin-top:4px}
+.story-card h2{font-size:44px;margin:8px 0 12px}
+.story-card p{min-height:70px;margin:0 0 18px;color:#d5dfdb!important;font-size:15px}
+.story-card button{grid-column:2}
 @keyframes scareShake{from{transform:translate(-7px,4px)}to{transform:translate(7px,-4px)}}
 @keyframes scarePulse{from{opacity:.35}to{opacity:1}}
 @media(max-width:600px){
@@ -38,4 +44,9 @@
   .touch-actions button{min-height:32px;padding:4px;font-size:8px}
   .touch-actions .primary-touch{grid-column:span 2}
   .jump-scare strong{bottom:16%}
+  .story-card{grid-template-columns:82px 1fr;column-gap:12px}
+  .story-card img{width:82px;height:120px}
+  .story-card h2{font-size:31px;margin:5px 0 8px}
+  .story-card p{font-size:12px;min-height:74px}
+  .story-card button{grid-column:1/3}
 }
