@@ -18,6 +18,9 @@ const wedgeItem = document.querySelector('#wedgeItem');
 const maskItem = document.querySelector('#maskItem');
 const narrationToggle = document.querySelector('#narrationToggle');
 const soundToggle = document.querySelector('#soundToggle');
+const dangerMusic = new Audio('danger-song.mp3?v=46');
+dangerMusic.loop = true;
+dangerMusic.preload = 'auto';
 
 const TILE = 40;
 const COLS = 32;
@@ -123,12 +126,17 @@ let lastKnownPlayer;
 let huntMemory;
 let bossSearching;
 let lastAmbush;
+let dangerMusicActive;
+let dangerNearSince;
+let dangerFarSince;
+let dangerFadeTimer;
 let audioContext;
 let ambientGain;
 let lastAnnouncement = '';
 let blindMode = false;
 
 function resetGame() {
+  stopDangerMusic(true);
   if(themeTimer){clearInterval(themeTimer);themeTimer=null;}
   player = {...playerStart};
   boss = {...bossStart};
@@ -187,6 +195,9 @@ function resetGame() {
   huntMemory = 0;
   bossSearching = false;
   lastAmbush = 0;
+  dangerMusicActive = false;
+  dangerNearSince = 0;
+  dangerFarSince = 0;
   powerOn = true;
   document.querySelector('#endModal').hidden = true;
   document.querySelector('#storyModal').hidden = true;
@@ -584,6 +595,7 @@ function checkCaught(){
 }
 function endGame(success){
   running=false;won=success;
+  stopDangerMusic(false);
   if(themeTimer){clearInterval(themeTimer);themeTimer=null;}
   document.querySelector('#endKicker').textContent=success?'SHIFT SURVIVED':'SHIFT ENDED';
   document.querySelector('#endTitle').textContent=success?'YOU ESCAPED.':'CAUGHT.';
@@ -761,17 +773,79 @@ function useScentMask(){
 }
 function impactSound(){noiseBurst(.3,.09,0);tone(58,.45,0);}
 function powerFailureSound(){[520,410,300,180].forEach((frequency,index)=>setTimeout(()=>tone(frequency,.22,0),index*110));}
+function fadeDangerMusic(target,duration,onDone){
+  if(dangerFadeTimer)clearInterval(dangerFadeTimer);
+  const startVolume=dangerMusic.volume;
+  const started=performance.now();
+  dangerFadeTimer=setInterval(()=>{
+    const progress=Math.min(1,(performance.now()-started)/duration);
+    dangerMusic.volume=Math.max(0,Math.min(1,startVolume+(target-startVolume)*progress));
+    if(progress>=1){
+      clearInterval(dangerFadeTimer);
+      dangerFadeTimer=null;
+      if(onDone)onDone();
+    }
+  },40);
+}
+function startDangerMusic(){
+  if(dangerMusicActive||!soundToggle.checked)return;
+  dangerMusicActive=true;
+  dangerMusic.currentTime=0;
+  dangerMusic.volume=0;
+  dangerMusic.play().then(()=>fadeDangerMusic(.78,550)).catch(()=>{dangerMusicActive=false;});
+}
+function stopDangerMusic(immediate=false){
+  dangerNearSince=0;
+  dangerFarSince=0;
+  if(dangerFadeTimer){clearInterval(dangerFadeTimer);dangerFadeTimer=null;}
+  if(immediate){
+    dangerMusic.pause();
+    dangerMusic.currentTime=0;
+    dangerMusic.volume=0;
+    dangerMusicActive=false;
+    return;
+  }
+  if(!dangerMusicActive)return;
+  fadeDangerMusic(0,650,()=>{
+    dangerMusic.pause();
+    dangerMusic.currentTime=0;
+    dangerMusicActive=false;
+  });
+}
+function updateDangerMusic(time,distance){
+  if(!running||paused||phase!=='escape'||!soundToggle.checked){
+    if(dangerMusicActive)stopDangerMusic(false);
+    return;
+  }
+  if(distance<=6){
+    const returningDuringFade=dangerFarSince>0&&dangerMusicActive&&dangerMusic.volume<.7;
+    dangerFarSince=0;
+    if(returningDuringFade)fadeDangerMusic(.78,300);
+    if(!dangerNearSince)dangerNearSince=time;
+    if(!dangerMusicActive&&time-dangerNearSince>=450)startDangerMusic();
+  }else if(distance>=9){
+    dangerNearSince=0;
+    if(!dangerFarSince)dangerFarSince=time;
+    if(dangerMusicActive&&time-dangerFarSince>=1100)stopDangerMusic(false);
+  }
+}
+function primeDangerMusic(){
+  dangerMusic.volume=0;
+  const primed=dangerMusic.play();
+  if(primed)primed.then(()=>{dangerMusic.pause();dangerMusic.currentTime=0;}).catch(()=>{});
+}
 function startStoreMusic(){
   if(themeTimer)clearInterval(themeTimer);
   let pulse=0;const drones=[98,103,92,87];
-  themeTimer=setInterval(()=>{if(!running||paused||!soundToggle.checked)return;tone(drones[pulse%4],.85,pulse%2?-.35:.35);if(pulse%3===0)noiseBurst(.18,.012,0);pulse++;},1100);
+  themeTimer=setInterval(()=>{if(!running||paused||!soundToggle.checked||dangerMusicActive)return;tone(drones[pulse%4],.85,pulse%2?-.35:.35);if(pulse%3===0)noiseBurst(.18,.012,0);pulse++;},1100);
 }
 function startTheme(){
   if(themeTimer)clearInterval(themeTimer);
   let beat=0;
-  themeTimer=setInterval(()=>{if(!running||paused||!soundToggle.checked)return;const notes=hasKey?[55,62,58,47]:[65,69,58,62];tone(notes[beat%4],hasKey?.42:.34,beat%2?-.55:.55);tone(notes[beat%4]*1.414,.13,-(beat%2?-.35:.35));if(beat%2===0)noiseBurst(.11,hasKey?.055:.035,0);if(beat%4===3)keyRattle(boss.x-player.x);beat++;},hasKey?430:620);
+  themeTimer=setInterval(()=>{if(!running||paused||!soundToggle.checked||dangerMusicActive)return;const notes=hasKey?[55,62,58,47]:[65,69,58,62];tone(notes[beat%4],hasKey?.42:.34,beat%2?-.55:.55);tone(notes[beat%4]*1.414,.13,-(beat%2?-.35:.35));if(beat%2===0)noiseBurst(.11,hasKey?.055:.035,0);if(beat%4===3)keyRattle(boss.x-player.x);beat++;},hasKey?430:620);
 }
 function beginHorror(){
+  stopDangerMusic(true);
   phase='escape';
   powerOn=false;
   foodPortions=3;
@@ -824,7 +898,7 @@ function fearEvent(time){
   }
   draw();setTimeout(()=>{if(running)draw();},900);
 }
-function gameLoop(time){bossStep(time);fearEvent(time);requestAnimationFrame(gameLoop);}
+function gameLoop(time){bossStep(time);updateDangerMusic(time,manhattan(player,boss));fearEvent(time);requestAnimationFrame(gameLoop);}
 window.addEventListener('keydown',event=>{
   if(document.querySelector('#startModal').hidden===false||document.querySelector('#accessModal').hidden===false||document.querySelector('#storyModal').hidden===false)return;
   const code=event.code;
@@ -866,11 +940,14 @@ document.querySelector('#storyNextButton').addEventListener('click',advanceDialo
 document.querySelector('#compassButton').addEventListener('click',audioCompass);
 document.querySelector('#repeatButton').addEventListener('click',()=>announce(objective(),true));
 document.querySelector('#contrastToggle').addEventListener('change',event=>document.body.classList.toggle('extra-contrast',event.target.checked));
-soundToggle.addEventListener('change',()=>{if(ambientGain)ambientGain.gain.setTargetAtTime(soundToggle.checked?.018:0,audioContext.currentTime,.08);});
+soundToggle.addEventListener('change',()=>{
+  if(ambientGain)ambientGain.gain.setTargetAtTime(soundToggle.checked?.018:0,audioContext.currentTime,.08);
+  if(!soundToggle.checked)stopDangerMusic(true);
+});
 document.querySelector('#startButton').addEventListener('click',()=>{
   blindMode=document.querySelector('#blindModeStart').checked;
   document.querySelector('#startModal').hidden=true;
-  ensureAudio();resetGame();
+  ensureAudio();primeDangerMusic();resetGame();
   startStoreMusic();
   canvas.focus();
   tone(660,.09,0);setTimeout(()=>tone(880,.14,0),110);
