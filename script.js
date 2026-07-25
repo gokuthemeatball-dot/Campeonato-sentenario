@@ -12,6 +12,9 @@ const foodItem = document.querySelector('#foodItem');
 const craftItem = document.querySelector('#craftItem');
 const mapItem = document.querySelector('#mapItem');
 const lureItem = document.querySelector('#lureItem');
+const cameraItem = document.querySelector('#cameraItem');
+const wedgeItem = document.querySelector('#wedgeItem');
+const maskItem = document.querySelector('#maskItem');
 const narrationToggle = document.querySelector('#narrationToggle');
 const soundToggle = document.querySelector('#soundToggle');
 
@@ -31,6 +34,12 @@ const paperSpot = {x:18,y:8};
 const markerSpot = {x:23,y:3};
 const canSpot = {x:9,y:12};
 const batterySpot = {x:28,y:14};
+const cameraSpot = {x:3,y:10};
+const flashCellSpot = {x:20,y:2};
+const handleSpot = {x:11,y:16};
+const tapeSpot = {x:29,y:6};
+const ragSpot = {x:18,y:12};
+const coffeeSpot = {x:6,y:7};
 const hideSpots = [{x:6,y:2},{x:25,y:17},{x:15,y:9},{x:5,y:11},{x:26,y:8}];
 const patrolPoints = [{x:28,y:3},{x:28,y:15},{x:21,y:17},{x:12,y:17},{x:3,y:12},{x:5,y:3},{x:16,y:9}];
 
@@ -82,6 +91,17 @@ let hasLure;
 let showMapUntil;
 let lureTarget;
 let lureTurns;
+let hasCamera;
+let hasFlashCell;
+let hasFlashCamera;
+let hasHandle;
+let hasTape;
+let hasDoorJammer;
+let jammerSpot;
+let hasRag;
+let hasCoffee;
+let hasScentMask;
+let scentMaskUntil;
 let flickerUntil;
 let lastFearEvent;
 let audioContext;
@@ -125,6 +145,17 @@ function resetGame() {
   showMapUntil = 0;
   lureTarget = null;
   lureTurns = 0;
+  hasCamera = false;
+  hasFlashCell = false;
+  hasFlashCamera = false;
+  hasHandle = false;
+  hasTape = false;
+  hasDoorJammer = false;
+  jammerSpot = null;
+  hasRag = false;
+  hasCoffee = false;
+  hasScentMask = false;
+  scentMaskUntil = 0;
   flickerUntil = 0;
   lastFearEvent = 0;
   powerOn = true;
@@ -174,6 +205,12 @@ function updateHud() {
   mapItem.classList.toggle('found',hasMap);
   lureItem.textContent=`NOISE LURE ${hasLure?'●':'○'}`;
   lureItem.classList.toggle('found',hasLure);
+  cameraItem.textContent=`FLASH CAMERA ${hasFlashCamera?'●':'○'}`;
+  cameraItem.classList.toggle('found',hasFlashCamera);
+  wedgeItem.textContent=`DOOR JAMMER ${hasDoorJammer?'●':'○'}`;
+  wedgeItem.classList.toggle('found',hasDoorJammer);
+  maskItem.textContent=`SCENT MASK ${hasScentMask?'●':'○'}`;
+  maskItem.classList.toggle('found',hasScentMask);
   const distance = manhattan(player, boss);
   if(phase==='cleaning'){dangerStatus.textContent='SHIFT: NORMAL';dangerStatus.style.color='#c7ff4a';return;}
   const bossPhase=hasKey?'ENRAGED':powerOn?'HUNTING':'STALKING';
@@ -259,6 +296,12 @@ function interact() {
   if(phase!=='cleaning'&&!hasMarker&&manhattan(player,markerSpot)<=1){hasMarker=true;pickupSound();announce('Marker collected. Find the store plan to finish the guidance map.',false);tryCraftMap();updateHud();draw();return;}
   if(phase!=='cleaning'&&!hasCan&&manhattan(player,canSpot)<=1){hasCan=true;pickupSound();announce('Empty can collected. Find batteries to build a noise lure.',false);tryCraftLure();updateHud();draw();return;}
   if(phase!=='cleaning'&&!hasBattery&&manhattan(player,batterySpot)<=1){hasBattery=true;pickupSound();announce('Batteries collected. Find an empty can to build a noise lure.',false);tryCraftLure();updateHud();draw();return;}
+  if(phase!=='cleaning'&&!hasCamera&&manhattan(player,cameraSpot)<=1){hasCamera=true;pickupSound();announce('Disposable camera collected. Find a flash cell to weaponize it.',false);tryCraftCamera();updateHud();draw();return;}
+  if(phase!=='cleaning'&&!hasFlashCell&&manhattan(player,flashCellSpot)<=1){hasFlashCell=true;pickupSound();announce('Flash cell collected. Find the disposable camera.',false);tryCraftCamera();updateHud();draw();return;}
+  if(phase!=='cleaning'&&!hasHandle&&manhattan(player,handleSpot)<=1){hasHandle=true;pickupSound();announce('Broken broom handle collected. Find duct tape for a door jammer.',false);tryCraftJammer();updateHud();draw();return;}
+  if(phase!=='cleaning'&&!hasTape&&manhattan(player,tapeSpot)<=1){hasTape=true;pickupSound();announce('Duct tape collected. Find a broken handle for a door jammer.',false);tryCraftJammer();updateHud();draw();return;}
+  if(phase!=='cleaning'&&!hasRag&&manhattan(player,ragSpot)<=1){hasRag=true;pickupSound();announce('Cleaning rag collected. Find coffee grounds for a scent mask.',false);tryCraftMask();updateHud();draw();return;}
+  if(phase!=='cleaning'&&!hasCoffee&&manhattan(player,coffeeSpot)<=1){hasCoffee=true;pickupSound();announce('Coffee grounds collected. Find a cleaning rag for a scent mask.',false);tryCraftMask();updateHud();draw();return;}
   const hide = hideSpots.find(h => manhattan(player,h) <= 1);
   if (hidden) {
     hidden = false;
@@ -311,6 +354,12 @@ function nearestImportant() {
   if(phase!=='cleaning'&&!hasMarker)targets.push({...markerSpot,label:'Marker'});
   if(phase!=='cleaning'&&!hasCan)targets.push({...canSpot,label:'Empty can'});
   if(phase!=='cleaning'&&!hasBattery)targets.push({...batterySpot,label:'Batteries'});
+  if(phase!=='cleaning'&&!hasCamera)targets.push({...cameraSpot,label:'Camera'});
+  if(phase!=='cleaning'&&!hasFlashCell)targets.push({...flashCellSpot,label:'Flash cell'});
+  if(phase!=='cleaning'&&!hasHandle)targets.push({...handleSpot,label:'Handle'});
+  if(phase!=='cleaning'&&!hasTape)targets.push({...tapeSpot,label:'Duct tape'});
+  if(phase!=='cleaning'&&!hasRag)targets.push({...ragSpot,label:'Rag'});
+  if(phase!=='cleaning'&&!hasCoffee)targets.push({...coffeeSpot,label:'Coffee'});
   targets.sort((a,b)=>manhattan(player,a)-manhattan(player,b));
   const target = targets[0];
   const dx=target.x-player.x,dy=target.y-player.y;
@@ -335,7 +384,8 @@ function bossStep(time) {
   lastBossMove = time;
   if(time<bossStunnedUntil){dangerStatus.textContent='BOSS: STUNNED';dangerStatus.style.color='#54cfff';return;}
   const baseSight=flashlight ? (hasKey?9:6) : (hasKey?5:3);
-  const seesPlayer = manhattan(player,boss) <= Math.max(2,baseSight-(crouching?3:0));
+  const scentMasked = time < scentMaskUntil;
+  const seesPlayer = manhattan(player,boss) <= Math.max(scentMasked?1:2,baseSight-(crouching?3:0)-(scentMasked?4:0));
   let target;
   if(lureTurns>0&&lureTarget){
     target=lureTarget;lureTurns--;
@@ -347,7 +397,15 @@ function bossStep(time) {
     if (manhattan(boss,target) <= 1) patrolIndex=(patrolIndex+1)%patrolPoints.length;
   }
   const path = findPath(boss,target);
+  const bossBeforeMove = {...boss};
   if (path.length > 1) boss = path[1];
+  if(jammerSpot&&manhattan(boss,jammerSpot)===0){
+    boss=bossBeforeMove;
+    jammerSpot=null;
+    bossStunnedUntil=time+7000;
+    impactSound();
+    announce('Mr. Hollow hits the door jammer. The aisle shakes, but the pursuit stops for seven seconds.',true);
+  }
   const distance = manhattan(player,boss);
   if (distance <= 6) {
     spatialCue(boss.x-player.x, distance <= 2 ? 75 : 105);
@@ -417,6 +475,12 @@ function draw() {
   if(phase!=='cleaning'&&!hasMarker)drawMarker(markerSpot,'#d9a06d','PEN');
   if(phase!=='cleaning'&&!hasCan)drawMarker(canSpot,'#a8b1ae','CAN');
   if(phase!=='cleaning'&&!hasBattery)drawMarker(batterySpot,'#e3c866','CELL');
+  if(phase!=='cleaning'&&!hasCamera)drawMarker(cameraSpot,'#8be7ff','CAM');
+  if(phase!=='cleaning'&&!hasFlashCell)drawMarker(flashCellSpot,'#fff38b','FLASH');
+  if(phase!=='cleaning'&&!hasHandle)drawMarker(handleSpot,'#b68b67','WOOD');
+  if(phase!=='cleaning'&&!hasTape)drawMarker(tapeSpot,'#bdc7c4','TAPE');
+  if(phase!=='cleaning'&&!hasRag)drawMarker(ragSpot,'#9aaea8','RAG');
+  if(phase!=='cleaning'&&!hasCoffee)drawMarker(coffeeSpot,'#9b6948','COFFEE');
   if(phase!=='cleaning'&&!hasFuse)drawMarker(fuse,'#ffc44a','F');
   if(powerOn&&!hasKey)drawMarker(keycard,'#54cfff','K');
   drawMarker(exit,hasKey?'#c7ff4a':'#5a665f','EXIT');
@@ -444,6 +508,7 @@ function draw() {
   if(hasMap&&performance.now()<showMapUntil){
     const goal=currentGoal();ctx.strokeStyle='rgba(199,255,74,.68)';ctx.lineWidth=3;ctx.setLineDash([8,8]);ctx.beginPath();ctx.moveTo(player.x*TILE+20,player.y*TILE+20);ctx.lineTo(goal.x*TILE+20,goal.y*TILE+20);ctx.stroke();ctx.setLineDash([]);
   }
+  if(jammerSpot)drawMarker(jammerSpot,'#ff9f43','JAM');
   if(performance.now()<flickerUntil){ctx.fillStyle='rgba(0,0,0,.78)';ctx.fillRect(0,0,canvas.width,canvas.height);}
 }
 
@@ -494,6 +559,9 @@ function tryCraft(){
 }
 function tryCraftMap(){if(!hasPaper||!hasMarker||hasMap)return;hasMap=true;tone(480,.08,-.3);setTimeout(()=>tone(720,.12,.3),100);announce('Guidance map completed. Press M to reveal a route toward your objective.',true);}
 function tryCraftLure(){if(!hasCan||!hasBattery||hasLure)return;hasLure=true;tone(260,.07,-.2);setTimeout(()=>tone(520,.12,.2),90);announce('Noise lure assembled. Press N to pull Mr. Hollow away from you.',true);}
+function tryCraftCamera(){if(!hasCamera||!hasFlashCell||hasFlashCamera)return;hasFlashCamera=true;tone(700,.06,-.3);setTimeout(()=>tone(1300,.1,.3),80);announce('Flash camera crafted. Press X at close range to blind Mr. Hollow, but the flash reveals your position.',true);}
+function tryCraftJammer(){if(!hasHandle||!hasTape||hasDoorJammer)return;hasDoorJammer=true;tone(240,.08,-.3);setTimeout(()=>tone(410,.12,.3),100);announce('Door jammer crafted. Press V to place it. Mr. Hollow will be stopped when he crosses that tile.',true);}
+function tryCraftMask(){if(!hasRag||!hasCoffee||hasScentMask)return;hasScentMask=true;tone(360,.09,-.2);setTimeout(()=>noiseBurst(.12,.025,.2),90);announce('Scent mask crafted. Press Z for a short stealth window.',true);}
 function eatCarriedFood(){
   if(!running||paused)return;
   if(foodPortions<1){announce('No food remains in your pack.',false);return;}
@@ -518,6 +586,29 @@ function useStunBottle(){
     bossStunnedUntil=performance.now()+9000;announce('Direct hit. Mr. Hollow is stunned for nine seconds.',true);
   }else announce('The bottle shattered, but Mr. Hollow was too far away.',true);
   updateHud();draw();
+}
+function useFlashCamera(){
+  if(!running||paused)return;
+  if(!hasFlashCamera){announce('Craft a flash camera from a disposable camera and flash cell.',false);return;}
+  hasFlashCamera=false;
+  noiseBurst(.1,.13,0);[1500,1900,2300].forEach((f,i)=>setTimeout(()=>tone(f,.05,0),i*35));
+  flickerUntil=performance.now()+320;
+  noiseTurns=7;
+  if(phase!=='cleaning'&&manhattan(player,boss)<=8){bossStunnedUntil=performance.now()+6000;announce('The flash catches Mr. Hollow. He is blinded for six seconds, but now he knows exactly where you are.',true);}
+  else announce('The camera flashes into an empty aisle. The noise gives away your position.',true);
+  updateHud();draw();
+}
+function placeJammer(){
+  if(!running||paused)return;
+  if(!hasDoorJammer){announce('Craft a door jammer from a broken handle and duct tape.',false);return;}
+  hasDoorJammer=false;jammerSpot={...player};tone(180,.1,0);setTimeout(()=>tone(120,.14,0),90);
+  announce('Door jammer placed here. Lead Mr. Hollow across this tile to stop him.',true);updateHud();draw();
+}
+function useScentMask(){
+  if(!running||paused)return;
+  if(!hasScentMask){announce('Craft a scent mask from a rag and coffee grounds.',false);return;}
+  hasScentMask=false;scentMaskUntil=performance.now()+18000;noiseTurns=0;noiseBurst(.18,.025,0);
+  announce('Scent mask active for eighteen seconds. Stay crouched and keep your flashlight off for the best concealment.',true);updateHud();
 }
 function impactSound(){noiseBurst(.3,.09,0);tone(58,.45,0);}
 function powerFailureSound(){[520,410,300,180].forEach((frequency,index)=>setTimeout(()=>tone(frequency,.22,0),index*110));}
@@ -567,6 +658,9 @@ window.addEventListener('keydown',event=>{
   else if(code==='KeyR'){event.preventDefault();eatCarriedFood();}
   else if(code==='KeyM'){event.preventDefault();useMap();}
   else if(code==='KeyN'){event.preventDefault();useLure();}
+  else if(code==='KeyX'){event.preventDefault();useFlashCamera();}
+  else if(code==='KeyV'){event.preventDefault();placeJammer();}
+  else if(code==='KeyZ'){event.preventDefault();useScentMask();}
   else if(code==='KeyH'){event.preventDefault();if(!event.repeat&&!hidden){crouching=!crouching;announce(crouching?'Crouched. You can move quietly and are harder to see.':'Standing. You move normally again.',true);draw();}}
   else if(code==='KeyP'){event.preventDefault();paused=!paused;document.querySelector('#pauseCard').hidden=!paused;announce(paused?'Game paused.':'Game resumed.',true);}
 },{capture:true});
@@ -593,7 +687,7 @@ document.querySelector('#startButton').addEventListener('click',()=>{
 document.querySelector('#restartButton').addEventListener('click',()=>{resetGame();startStoreMusic();announce(objective(),true);});
 document.querySelector('#accessButton').addEventListener('click',()=>{document.querySelector('#accessModal').hidden=false;});
 document.querySelector('#closeAccessButton').addEventListener('click',()=>{blindMode=document.querySelector('#blindModeStart').checked;document.querySelector('#accessModal').hidden=true;canvas.focus();});
-document.querySelector('#helpButton').addEventListener('click',()=>announce('Arrows move and turn. H toggles crouch stealth. E uses cabinets or collects items. R eats carried food. B throws a stun bottle. M uses the crafted map. N deploys a noise lure. F toggles the flashlight. P pauses.',true));
+document.querySelector('#helpButton').addEventListener('click',()=>announce('Arrows move and turn. H crouches. E interacts. R eats food. B throws a stun bottle. M uses the map. N deploys a noise lure. X fires the flash camera. V places a door jammer. Z uses the scent mask. F toggles the flashlight. P pauses.',true));
 
 resetGame();
 running = false;
