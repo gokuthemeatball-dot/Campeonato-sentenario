@@ -1089,7 +1089,11 @@ function fearEvent(time){
 }
 function gameLoop(time){bossStep(time);updateDangerMusic(time,manhattan(player,boss));fearEvent(time);requestAnimationFrame(gameLoop);}
 window.addEventListener('keydown',event=>{
-  if(document.querySelector('#startModal').hidden===false||document.querySelector('#accessModal').hidden===false||document.querySelector('#storyModal').hidden===false)return;
+  if(document.querySelector('#storyModal').hidden===false){
+    if(event.code==='Enter'&&!event.repeat){event.preventDefault();advanceDialogue();}
+    return;
+  }
+  if(document.querySelector('#startModal').hidden===false||document.querySelector('#accessModal').hidden===false)return;
   const code=event.code;
   if(code==='ArrowUp'){event.preventDefault();moveFacing(false,event.shiftKey);}
   else if(code==='ArrowDown'){event.preventDefault();moveFacing(true,false);}
