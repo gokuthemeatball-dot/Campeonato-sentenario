@@ -18,12 +18,15 @@ const wedgeItem = document.querySelector('#wedgeItem');
 const maskItem = document.querySelector('#maskItem');
 const narrationToggle = document.querySelector('#narrationToggle');
 const soundToggle = document.querySelector('#soundToggle');
-const dangerMusic = new Audio('danger-song.mp3?v=47');
+const dangerMusic = new Audio('danger-song.mp3?v=48');
 dangerMusic.loop = true;
 dangerMusic.preload = 'auto';
-const deathMusic = new Audio('death-song.mp3?v=47');
+const deathMusic = new Audio('death-song.mp3?v=48');
 deathMusic.loop = true;
 deathMusic.preload = 'auto';
+const lightsOutMusic = new Audio('lights-out-song.mp3?v=48');
+lightsOutMusic.loop = false;
+lightsOutMusic.preload = 'auto';
 
 const TILE = 40;
 const COLS = 32;
@@ -133,6 +136,7 @@ let dangerMusicActive;
 let dangerNearSince;
 let dangerFarSince;
 let dangerFadeTimer;
+let lightsOutMusicActive;
 let audioContext;
 let ambientGain;
 let lastAnnouncement = '';
@@ -141,6 +145,7 @@ let blindMode = false;
 function resetGame() {
   stopDangerMusic(true);
   stopDeathMusic();
+  stopLightsOutMusic();
   if(themeTimer){clearInterval(themeTimer);themeTimer=null;}
   player = {...playerStart};
   boss = {...bossStart};
@@ -202,6 +207,7 @@ function resetGame() {
   dangerMusicActive = false;
   dangerNearSince = 0;
   dangerFarSince = 0;
+  lightsOutMusicActive = false;
   powerOn = true;
   document.querySelector('#endModal').hidden = true;
   document.querySelector('#storyModal').hidden = true;
@@ -438,7 +444,6 @@ function interact() {
     noiseTurns = 5;
   } else if (powerOn && !hasKey && manhattan(player,keycard) <= 1) {
     hasKey = true;
-    startTheme();
     announce('Office keycard collected. Mr. Hollow enters his enraged phase. Reach the loading exit southeast.', true);
   } else if (hasKey && manhattan(player,exit) <= 1) {
     endGame(true);
@@ -600,6 +605,7 @@ function checkCaught(){
 function endGame(success){
   running=false;won=success;
   stopDangerMusic(!success);
+  stopLightsOutMusic();
   if(themeTimer){clearInterval(themeTimer);themeTimer=null;}
   document.querySelector('#endKicker').textContent=success?'SHIFT SURVIVED':'SHIFT ENDED';
   document.querySelector('#endTitle').textContent=success?'YOU ESCAPED.':'CAUGHT.';
@@ -818,6 +824,7 @@ function stopDangerMusic(immediate=false){
   });
 }
 function updateDangerMusic(time,distance){
+  if(lightsOutMusicActive)return;
   if(!running||paused||phase!=='escape'||!soundToggle.checked){
     if(dangerMusicActive)stopDangerMusic(false);
     return;
@@ -854,6 +861,25 @@ function primeDeathMusic(){
   const primed=deathMusic.play();
   if(primed)primed.then(()=>{deathMusic.pause();deathMusic.currentTime=0;deathMusic.volume=.82;}).catch(()=>{});
 }
+function playLightsOutMusic(){
+  if(!soundToggle.checked)return;
+  if(themeTimer){clearInterval(themeTimer);themeTimer=null;}
+  lightsOutMusicActive=true;
+  lightsOutMusic.currentTime=0;
+  lightsOutMusic.volume=.82;
+  lightsOutMusic.play().catch(()=>{lightsOutMusicActive=false;});
+}
+function stopLightsOutMusic(){
+  lightsOutMusic.pause();
+  lightsOutMusic.currentTime=0;
+  lightsOutMusicActive=false;
+}
+function primeLightsOutMusic(){
+  lightsOutMusic.volume=0;
+  const primed=lightsOutMusic.play();
+  if(primed)primed.then(()=>{lightsOutMusic.pause();lightsOutMusic.currentTime=0;lightsOutMusic.volume=.82;}).catch(()=>{});
+}
+lightsOutMusic.addEventListener('ended',()=>{lightsOutMusicActive=false;});
 function startStoreMusic(){
   if(themeTimer)clearInterval(themeTimer);
   let pulse=0;const drones=[98,103,92,87];
@@ -878,7 +904,7 @@ function beginHorror(){
   lastFearEvent=performance.now();
   powerFailureSound();
   setTimeout(()=>tone(55,.7,0),430);
-  startTheme();
+  playLightsOutMusic();
   announce('The final spill is clean. The lights die. Mr. Hollow locks the doors. You pocket three food portions. Find the stockroom fuse and escape.',true);
 }
 function tone(frequency,duration,pan=0){if(!soundToggle.checked)return;ensureAudio();const o=audioContext.createOscillator(),g=audioContext.createGain(),p=audioContext.createStereoPanner?audioContext.createStereoPanner():audioContext.createGain();o.frequency.value=frequency;o.type='triangle';g.gain.setValueAtTime(.055,audioContext.currentTime);g.gain.exponentialRampToValueAtTime(.001,audioContext.currentTime+duration);if('pan'in p)p.pan.value=Math.max(-1,Math.min(1,pan));o.connect(g).connect(p).connect(audioContext.destination);o.start();o.stop(audioContext.currentTime+duration);}
@@ -962,12 +988,12 @@ document.querySelector('#repeatButton').addEventListener('click',()=>announce(ob
 document.querySelector('#contrastToggle').addEventListener('change',event=>document.body.classList.toggle('extra-contrast',event.target.checked));
 soundToggle.addEventListener('change',()=>{
   if(ambientGain)ambientGain.gain.setTargetAtTime(soundToggle.checked?.018:0,audioContext.currentTime,.08);
-  if(!soundToggle.checked){stopDangerMusic(true);stopDeathMusic();}
+  if(!soundToggle.checked){stopDangerMusic(true);stopDeathMusic();stopLightsOutMusic();}
 });
 document.querySelector('#startButton').addEventListener('click',()=>{
   blindMode=document.querySelector('#blindModeStart').checked;
   document.querySelector('#startModal').hidden=true;
-  ensureAudio();primeDangerMusic();primeDeathMusic();resetGame();
+  ensureAudio();primeDangerMusic();primeDeathMusic();primeLightsOutMusic();resetGame();
   startStoreMusic();
   canvas.focus();
   tone(660,.09,0);setTimeout(()=>tone(880,.14,0),110);
