@@ -21,6 +21,10 @@ const maskItem = document.querySelector('#maskItem');
 const narrationToggle = document.querySelector('#narrationToggle');
 const soundToggle = document.querySelector('#soundToggle');
 const installButton = document.querySelector('#installButton');
+const languageSelect = document.querySelector('#languageSelect');
+const gestureControls = document.querySelector('#gestureControls');
+const gesturePad = document.querySelector('#gesturePad');
+const gestureItemStatus = document.querySelector('#gestureItemStatus');
 const dangerMusic = new Audio('danger-song.mp3?v=51');
 dangerMusic.loop = true;
 dangerMusic.preload = 'auto';
@@ -159,6 +163,86 @@ let ambientGain;
 let lastAnnouncement = '';
 let blindMode = false;
 let deferredInstallPrompt = null;
+let language = localStorage.getItem('aisle13Language') === 'es' ? 'es' : 'en';
+let selectedGestureItem = 0;
+let gestureStart = null;
+let gestureLast = null;
+let gestureHoldTimer = null;
+let gestureDirection = '';
+let gestureWentDown = false;
+let gestureWentUp = false;
+let gestureFirstVertical = '';
+let gesturePattern = '';
+let gestureLastTap = 0;
+
+const spanishExact = {
+  'Listen to Mr. Hollow’s instructions.':'Escucha las instrucciones del señor Hollow.',
+  'Find the stockroom fuse in the southwest corner.':'Encuentra el fusible del almacén en la esquina suroeste.',
+  'Install the fuse at the breaker beside you.':'Instala el fusible en el interruptor que está a tu lado.',
+  'Find the office keycard in the northeast corner.':'Encuentra la tarjeta de la oficina en la esquina noreste.',
+  'Reach the loading exit in the southeast corner.':'Llega a la salida de carga en la esquina sureste.',
+  'Walk to the front checkout and press E to serve each customer.':'Ve a la caja principal y usa Interactuar para atender a cada cliente.',
+  'Mr. Hollow orders you to clean the two marked spills.':'El señor Hollow te ordena limpiar los dos derrames marcados.',
+  'You are out of energy. Find food and press E to eat.':'No tienes energía. Encuentra comida y usa Interactuar para comer.',
+  'Blocked. A shelf or wall is in that direction.':'Bloqueado. Hay un estante o una pared en esa dirección.',
+  'Your memory becomes whole again. Your breathing steadies, your energy rises, and Mr. Hollow loses your trail for four seconds.':'Tu memoria vuelve a estar completa. Recuperas energía y el señor Hollow pierde tu rastro durante cuatro segundos.',
+  'Hidden inside a supply cabinet. Mr. Hollow cannot see you. Press E to leave.':'Estás escondido en un armario. El señor Hollow no puede verte. Usa Interactuar para salir.',
+  'You leave the hiding place. Listen before moving.':'Sales del escondite. Escucha antes de moverte.',
+  'Fuse collected. Install it at the breaker here by pressing E again.':'Fusible recogido. Instálalo en el interruptor usando Interactuar otra vez.',
+  'Power restored. Mr. Hollow heard the breaker. Find the office keycard northeast.':'La energía volvió. El señor Hollow oyó el interruptor. Encuentra la tarjeta al noreste.',
+  'Office keycard collected. Mr. Hollow enters his enraged phase. Reach the loading exit southeast.':'Tarjeta recogida. El señor Hollow entra en su fase furiosa. Llega a la salida de carga al sureste.',
+  'Nothing to use here.':'No hay nada que usar aquí.',
+  'The store falls silent. Mr. Hollow’s location is unknown.':'La tienda queda en silencio. No se conoce la ubicación del señor Hollow.',
+  'Caught by Mr. Hollow. Shift ended.':'El señor Hollow te atrapó. El turno terminó.',
+  'You escaped Aisle 13. Shift survived.':'Escapaste del Pasillo 13. Sobreviviste al turno.',
+  'No food remains in your pack.':'No queda comida en tu mochila.',
+  'Your energy is already full.':'Tu energía ya está llena.',
+  'Noise lure deployed. Mr. Hollow turns toward the sound.':'Señuelo de ruido desplegado. El señor Hollow se dirige hacia el sonido.',
+  'Door jammer placed here. Lead Mr. Hollow across this tile to stop him.':'Bloqueador colocado. Haz que el señor Hollow pase por aquí para detenerlo.',
+  'The final spill is clean. The lights die. Mr. Hollow locks the doors. You pocket three food portions. Find the stockroom fuse and escape.':'Limpiaste el último derrame. Las luces se apagan y el señor Hollow cierra las puertas. Tienes tres porciones de comida. Encuentra el fusible y escapa.',
+  'Crouched. You move quietly.':'Agachado. Te mueves en silencio.',
+  'Standing.':'De pie.',
+  'Game paused.':'Juego en pausa.',
+  'Game resumed.':'Juego reanudado.',
+  'Standard control layout active.':'Controles estándar activados.',
+  'Blind gesture mode active. Turn off VoiceOver or TalkBack now. Swipe and hold to move, double tap to interact, down then up to choose an item, and up then down to use it.':'Modo de gestos para jugadores ciegos activado. Ahora desactiva VoiceOver o TalkBack. Desliza y mantén para moverte, toca dos veces para interactuar, abajo y arriba para elegir un objeto, y arriba y abajo para usarlo.',
+  'Blind gesture mode selected. Start the game first, then turn off VoiceOver or TalkBack when instructed.':'Modo de gestos para jugadores ciegos seleccionado. Primero inicia el juego y después desactiva VoiceOver o TalkBack cuando se te indique.',
+  'You are the new night employee. I am Mr. Hollow. While these doors are open, every customer leaves satisfied.':'Eres el nuevo empleado nocturno. Soy el señor Hollow. Mientras estas puertas estén abiertas, todos los clientes deben salir satisfechos.',
+  'Understood. Where do you need me?':'Entendido. ¿Dónde me necesita?',
+  'Front checkout. Three customers remain. Scan their items, take payment, and do not ask why they are shopping this late.':'La caja principal. Quedan tres clientes. Escanea sus productos, cobra y no preguntes por qué compran tan tarde.'
+};
+
+function translateText(message){
+  if(language!=='es'||!message)return message;
+  if(spanishExact[message])return spanishExact[message];
+  return message
+    .replace(/^Facing north\.$/,'Mirando al norte.')
+    .replace(/^Facing south\.$/,'Mirando al sur.')
+    .replace(/^Facing east\.$/,'Mirando al este.')
+    .replace(/^Facing west\.$/,'Mirando al oeste.')
+    .replace(/\bnortheast\b/gi,'noreste').replace(/\bnorthwest\b/gi,'noroeste').replace(/\bsoutheast\b/gi,'sureste').replace(/\bsouthwest\b/gi,'suroeste')
+    .replace(/\bnorth\b/gi,'norte').replace(/\bsouth\b/gi,'sur').replace(/\beast\b/gi,'este').replace(/\bwest\b/gi,'oeste')
+    .replace(/\bsteps?\b/gi,'pasos').replace(/\bremaining\b/gi,'restantes').replace(/\bleft\b/gi,'restantes')
+    .replace(/^Flashlight on\.$/,'Linterna encendida.').replace(/^Flashlight off\.$/,'Linterna apagada.')
+    .replace(/^Selected item: /,'Objeto seleccionado: ')
+    .replace(/^Using selected item: /,'Usando objeto: ')
+    .replace(/^Mr\. Hollow says: /,'El señor Hollow dice: ')
+    .replace(/^YOU says: /,'TÚ dices: ');
+}
+
+function applyLanguage(){
+  languageSelect.value=language;
+  document.documentElement.lang=language;
+  const es=language==='es';
+  document.querySelector('#accessTitle').textContent=es?'Visual, audio o ambos':'Visual, audio, or both';
+  document.querySelector('#startButton').innerHTML=es?'INICIAR JUEGO <span>→</span>':'START GAME <span>→</span>';
+  document.querySelector('#accessButton').textContent=es?'Accesibilidad':'Accessibility';
+  document.querySelector('#helpButton').textContent=es?'Controles':'Controls';
+  document.querySelector('#gestureTitle').textContent=es?'MODO DE GESTOS':'GESTURE MODE';
+  document.querySelector('#gestureHint').textContent=es?'Usa toda la pantalla como un solo control':'Use the whole screen as one controller';
+  updateGestureItemStatus();
+  if(running){updateHud();draw();}
+}
 
 function resetGame() {
   stopDangerMusic(true);
@@ -254,14 +338,16 @@ function objective() {
 }
 
 function announce(message, speak = true) {
-  if (!message || message === lastAnnouncement) return;
-  lastAnnouncement = message;
+  const localizedMessage=translateText(message);
+  if (!localizedMessage || localizedMessage === lastAnnouncement) return;
+  lastAnnouncement = localizedMessage;
   liveRegion.textContent = '';
-  setTimeout(() => { liveRegion.textContent = message; }, 20);
-  visualMessage.textContent = message;
+  setTimeout(() => { liveRegion.textContent = localizedMessage; }, 20);
+  visualMessage.textContent = localizedMessage;
   if (speak && narrationToggle.checked && 'speechSynthesis' in window) {
     speechSynthesis.cancel();
-    const voice = new SpeechSynthesisUtterance(message);
+    const voice = new SpeechSynthesisUtterance(localizedMessage);
+    voice.lang=language==='es'?'es-US':'en-US';
     voice.rate = blindMode ? 1.05 : 1;
     voice.pitch = 0.9;
     speechSynthesis.speak(voice);
@@ -277,9 +363,9 @@ function openDialogue(steps,onDone){
 }
 function showDialogueStep(){
   const step=dialogueSteps[dialogueIndex];
-  document.querySelector('#storySpeaker').textContent=step.speaker;
-  document.querySelector('#storyText').textContent=step.text;
-  document.querySelector('#storyNextButton').innerHTML=dialogueIndex===dialogueSteps.length-1?'BEGIN TASK <span>→</span>':'CONTINUE <span>→</span>';
+  document.querySelector('#storySpeaker').textContent=language==='es'?(step.speaker==='YOU'?'TÚ':'SEÑOR HOLLOW'):step.speaker;
+  document.querySelector('#storyText').textContent=translateText(step.text);
+  document.querySelector('#storyNextButton').innerHTML=language==='es'?(dialogueIndex===dialogueSteps.length-1?'INICIAR TAREA <span>→</span>':'CONTINUAR <span>→</span>'):(dialogueIndex===dialogueSteps.length-1?'BEGIN TASK <span>→</span>':'CONTINUE <span>→</span>');
   announce(`${step.speaker} says: ${step.text}`,true);
 }
 function advanceDialogue(){
@@ -301,7 +387,7 @@ function startIntro(){
 }
 
 function updateHud() {
-  objectiveText.textContent = objective().replace(/\.$/, '');
+  objectiveText.textContent = translateText(objective()).replace(/\.$/, '');
   powerStatus.textContent = `POWER: ${powerOn ? 'ON' : 'OFF'}`;
   powerStatus.style.color = powerOn ? '#c7ff4a' : '#ff414d';
   energyStatus.textContent = `ENERGY: ${Math.round(energy)}`;
@@ -851,6 +937,98 @@ function useScentMask(){
   hasScentMask=false;scentMaskUntil=performance.now()+18000;noiseTurns=0;noiseBurst(.18,.025,0);
   announce('Scent mask active for eighteen seconds. Stay crouched and keep your flashlight off for the best concealment.',true);updateHud();
 }
+function gestureItems(){
+  return [
+    {name:language==='es'?'linterna':'flashlight',available:()=>true,use:()=>{flashlight=!flashlight;announce(`Flashlight ${flashlight?'on':'off'}.`,true);flashlightSound();draw();}},
+    {name:language==='es'?'brújula de audio':'audio compass',available:()=>true,use:audioCompass},
+    {name:language==='es'?'comida':'food',available:()=>foodPortions>0,use:eatCarriedFood},
+    {name:language==='es'?'mapa':'map',available:()=>hasMap,use:useMap},
+    {name:language==='es'?'señuelo de ruido':'noise lure',available:()=>hasLure,use:useLure},
+    {name:language==='es'?'botella aturdidora':'stun bottle',available:()=>hasStunBottle,use:useStunBottle},
+    {name:language==='es'?'cámara con flash':'flash camera',available:()=>hasFlashCamera,use:useFlashCamera},
+    {name:language==='es'?'bloqueador de puerta':'door jammer',available:()=>hasDoorJammer,use:placeJammer},
+    {name:language==='es'?'máscara de olor':'scent mask',available:()=>hasScentMask,use:useScentMask}
+  ];
+}
+function updateGestureItemStatus(){
+  if(!gestureItemStatus)return;
+  const items=gestureItems();
+  selectedGestureItem=Math.max(0,Math.min(selectedGestureItem,items.length-1));
+  gestureItemStatus.textContent=(language==='es'?'OBJETO SELECCIONADO: ':'SELECTED ITEM: ')+items[selectedGestureItem].name.toUpperCase();
+}
+function selectNextGestureItem(){
+  const items=gestureItems();
+  for(let offset=1;offset<=items.length;offset++){
+    const index=(selectedGestureItem+offset)%items.length;
+    if(items[index].available()){selectedGestureItem=index;break;}
+  }
+  updateGestureItemStatus();
+  announce(`Selected item: ${items[selectedGestureItem].name}.`,true);
+}
+function useSelectedGestureItem(){
+  const items=gestureItems();
+  const item=items[selectedGestureItem];
+  if(!item.available()){selectNextGestureItem();return;}
+  announce(`Using selected item: ${item.name}.`,false);
+  item.use();
+}
+function gestureStep(direction){
+  if(direction==='up')moveFacing(false,false);
+  else if(direction==='down')moveFacing(true,false);
+  else if(direction==='left')turnPlayer(-1);
+  else if(direction==='right')turnPlayer(1);
+}
+function stopGestureHold(){
+  if(gestureHoldTimer){clearTimeout(gestureHoldTimer);clearInterval(gestureHoldTimer);gestureHoldTimer=null;}
+  gesturePad.classList.remove('gesture-active');
+}
+function beginGestureHold(direction){
+  if(direction===gestureDirection||gesturePattern)return;
+  stopGestureHold();
+  gestureDirection=direction;
+  gestureHoldTimer=setTimeout(()=>{
+    gesturePad.classList.add('gesture-active');
+    gestureStep(direction);
+    gestureHoldTimer=setInterval(()=>gestureStep(direction),330);
+  },340);
+}
+gesturePad.addEventListener('pointerdown',event=>{
+  event.preventDefault();
+  gesturePad.setPointerCapture?.(event.pointerId);
+  gestureStart={x:event.clientX,y:event.clientY,time:performance.now(),id:event.pointerId};
+  gestureLast={x:event.clientX,y:event.clientY};
+  gestureDirection='';gestureWentDown=false;gestureWentUp=false;gestureFirstVertical='';gesturePattern='';
+});
+gesturePad.addEventListener('pointermove',event=>{
+  if(!gestureStart||event.pointerId!==gestureStart.id)return;
+  event.preventDefault();
+  gestureLast={x:event.clientX,y:event.clientY};
+  const dx=event.clientX-gestureStart.x,dy=event.clientY-gestureStart.y;
+  if(!gestureFirstVertical&&Math.abs(dy)>45)gestureFirstVertical=dy>0?'down':'up';
+  if(gestureFirstVertical==='down'&&dy<-28)gesturePattern='down-up';
+  if(gestureFirstVertical==='up'&&dy>28)gesturePattern='up-down';
+  if(gesturePattern){stopGestureHold();return;}
+  if(Math.max(Math.abs(dx),Math.abs(dy))<34)return;
+  beginGestureHold(Math.abs(dy)>=Math.abs(dx)?(dy<0?'up':'down'):(dx<0?'left':'right'));
+});
+function finishGesture(event){
+  if(!gestureStart||event.pointerId!==gestureStart.id)return;
+  event.preventDefault();
+  const duration=performance.now()-gestureStart.time;
+  const last=gestureLast||gestureStart;
+  const distance=Math.hypot(last.x-gestureStart.x,last.y-gestureStart.y);
+  stopGestureHold();
+  if(gesturePattern==='down-up')selectNextGestureItem();
+  else if(gesturePattern==='up-down')useSelectedGestureItem();
+  else if(distance<22&&duration<280){
+    const now=performance.now();
+    if(now-gestureLastTap<390){gestureLastTap=0;interact();}
+    else gestureLastTap=now;
+  }
+  gestureStart=null;gestureLast=null;gestureDirection='';gesturePattern='';
+}
+gesturePad.addEventListener('pointerup',finishGesture);
+gesturePad.addEventListener('pointercancel',finishGesture);
 function impactSound(){noiseBurst(.3,.09,0);tone(58,.45,0);}
 function powerFailureSound(){[520,410,300,180].forEach((frequency,index)=>setTimeout(()=>tone(frequency,.22,0),index*110));}
 function fadeDangerMusic(target,duration,onDone){
@@ -1188,19 +1366,30 @@ soundToggle.addEventListener('change',()=>{
   if(ambientGain)ambientGain.gain.setTargetAtTime(soundToggle.checked?(phase==='escape'?.038:.018):0,audioContext.currentTime,.08);
   if(!soundToggle.checked){stopDangerMusic(true);stopDeathMusic();stopLightsOutMusic();stopStoreTrack(true);stopExplorationTrack(true);}
 });
+languageSelect.addEventListener('change',()=>{
+  language=languageSelect.value==='es'?'es':'en';
+  localStorage.setItem('aisle13Language',language);
+  lastAnnouncement='';
+  applyLanguage();
+  announce(language==='es'?'Idioma cambiado a español.':'Language changed to English.',true);
+});
 document.querySelector('#startButton').addEventListener('click',()=>{
   blindMode=document.querySelector('#blindModeStart').checked;
   if(blindMode)narrationToggle.checked=true;
   document.body.classList.toggle('screen-reader-controls',blindMode);
+  gestureControls.hidden=!blindMode;
   document.querySelector('#startModal').hidden=true;
   ensureAudio();primeDangerMusic();primeDeathMusic();primeLightsOutMusic();primeStoreTrack();primeExplorationTrack();resetGame();
-  canvas.focus();
+  (blindMode?gesturePad:canvas).focus();
   tone(660,.09,0);setTimeout(()=>tone(880,.14,0),110);
-  startIntro();
+  if(blindMode){
+    announce('Blind gesture mode active. Turn off VoiceOver or TalkBack now. Swipe and hold to move, double tap to interact, down then up to choose an item, and up then down to use it.',true);
+    setTimeout(startIntro,5200);
+  }else startIntro();
 });
 document.querySelector('#restartButton').addEventListener('click',()=>{resetGame();startIntro();});
 document.querySelector('#accessButton').addEventListener('click',()=>{document.querySelector('#accessModal').hidden=false;});
-document.querySelector('#closeAccessButton').addEventListener('click',()=>{blindMode=document.querySelector('#blindModeStart').checked;if(blindMode)narrationToggle.checked=true;document.body.classList.toggle('screen-reader-controls',blindMode);document.querySelector('#accessModal').hidden=true;announce(blindMode?'Screen-reader controls active. Swipe left or right to choose a control, then double tap. Use Listen for direction and Repeat for your objective.':'Standard control layout active.',true);canvas.focus();});
+document.querySelector('#closeAccessButton').addEventListener('click',()=>{blindMode=document.querySelector('#blindModeStart').checked;if(blindMode)narrationToggle.checked=true;document.body.classList.toggle('screen-reader-controls',blindMode);gestureControls.hidden=!blindMode;document.querySelector('#accessModal').hidden=true;announce(blindMode?(running?'Blind gesture mode active. Turn off VoiceOver or TalkBack now. Swipe and hold to move, double tap to interact, down then up to choose an item, and up then down to use it.':'Blind gesture mode selected. Start the game first, then turn off VoiceOver or TalkBack when instructed.'):'Standard control layout active.',true);(blindMode&&running?gesturePad:canvas).focus();});
 document.querySelector('#helpButton').addEventListener('click',()=>announce('Arrows move and turn. H crouches. E interacts. R eats food. B throws a stun bottle. M uses the map. N deploys a noise lure. X fires the flash camera. V places a door jammer. Z uses the scent mask. F toggles the flashlight. P pauses.',true));
 window.addEventListener('beforeinstallprompt',event=>{
   event.preventDefault();
@@ -1219,4 +1408,5 @@ if('serviceWorker'in navigator)window.addEventListener('load',()=>navigator.serv
 
 resetGame();
 running = false;
+applyLanguage();
 requestAnimationFrame(gameLoop);

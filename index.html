@@ -17,7 +17,7 @@
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
   <link href="https://fonts.googleapis.com/css2?family=Barlow+Condensed:wght@600;700;800;900&family=IBM+Plex+Mono:wght@400;500;600&display=swap" rel="stylesheet" />
   <link rel="stylesheet" href="style.css?v=32" />
-  <link rel="stylesheet" href="horror-mobile.css?v=59" />
+  <link rel="stylesheet" href="horror-mobile.css?v=60" />
   <style>.inventory div{flex-wrap:wrap}.inventory{max-width:65%}</style>
 </head>
 <body>
@@ -112,6 +112,14 @@
     </div>
   </section>
 
+  <section id="gestureControls" class="gesture-controls" aria-label="Full-screen gesture controller" hidden>
+    <div id="gesturePad" class="gesture-pad" role="application" tabindex="0" aria-label="Gesture pad. Swipe and hold up to move forward, down to move backward, left or right to turn. Double tap to interact. Swipe down then up to choose an item. Swipe up then down to use it.">
+      <strong id="gestureTitle">GESTURE MODE</strong>
+      <span id="gestureHint">Use the whole screen as one controller</span>
+      <b id="gestureItemStatus">SELECTED ITEM: FLASHLIGHT</b>
+    </div>
+  </section>
+
   <div id="jumpScare" class="jump-scare" aria-hidden="true" hidden>
     <img src="mr-hollow.jpg" alt="" />
     <strong id="jumpScareText">RUN.</strong>
@@ -147,7 +155,13 @@
       <label><input id="narrationToggle" type="checkbox" /> Spoken game updates</label>
       <label><input id="soundToggle" type="checkbox" checked /> Spatial sounds and music</label>
       <label><input id="contrastToggle" type="checkbox" /> Extra-high contrast</label>
-      <label><input id="blindModeStart" type="checkbox" /> Screen-reader control layout and frequent spoken navigation</label>
+      <label><input id="blindModeStart" type="checkbox" /> Blind mobile gesture mode and frequent spoken navigation</label>
+      <label>Language
+        <select id="languageSelect">
+          <option value="en">English</option>
+          <option value="es">Español</option>
+        </select>
+      </label>
       <button id="compassButton" type="button">Audio compass <kbd>C</kbd></button>
       <button id="repeatButton" type="button">Repeat objective <kbd>Q</kbd></button>
       <button id="closeAccessButton" type="button">DONE <span>→</span></button>
@@ -164,6 +178,6 @@
   </div>
 
   <p id="liveRegion" class="sr-only" aria-live="assertive" aria-atomic="true"></p>
-  <script src="script.js?v=59"></script>
+  <script src="script.js?v=60"></script>
 </body>
 </html>
