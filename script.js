@@ -177,6 +177,7 @@ function resetGame() {
   patrolIndex = 0;
   facing = 0;
   phase = 'intro';
+  if(ambientGain)ambientGain.gain.setTargetAtTime(soundToggle.checked?.018:0,audioContext.currentTime,.25);
   cleanedSpots = new Set();
   catches = 0;
   energy = 100;
@@ -1027,6 +1028,7 @@ function startTheme(){
 function beginHorror(){
   stopDangerMusic(true);
   phase='escape';
+  if(ambientGain)ambientGain.gain.setTargetAtTime(soundToggle.checked?.038:0,audioContext.currentTime,.65);
   powerOn=false;
   foodPortions=3;
   boss={...bossStart};
@@ -1134,7 +1136,7 @@ document.querySelector('#compassButton').addEventListener('click',audioCompass);
 document.querySelector('#repeatButton').addEventListener('click',()=>announce(objective(),true));
 document.querySelector('#contrastToggle').addEventListener('change',event=>document.body.classList.toggle('extra-contrast',event.target.checked));
 soundToggle.addEventListener('change',()=>{
-  if(ambientGain)ambientGain.gain.setTargetAtTime(soundToggle.checked?.018:0,audioContext.currentTime,.08);
+  if(ambientGain)ambientGain.gain.setTargetAtTime(soundToggle.checked?(phase==='escape'?.038:.018):0,audioContext.currentTime,.08);
   if(!soundToggle.checked){stopDangerMusic(true);stopDeathMusic();stopLightsOutMusic();stopStoreTrack(true);stopExplorationTrack(true);}
 });
 document.querySelector('#startButton').addEventListener('click',()=>{
