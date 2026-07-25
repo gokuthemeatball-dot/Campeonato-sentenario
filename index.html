@@ -33,7 +33,7 @@
       </div>
 
       <div class="canvas-wrap" id="canvasWrap">
-        <canvas id="gameCanvas" width="960" height="600" role="img" aria-label="Top-down map of Holloway Family Market. Use the spoken navigation and audio compass if you cannot see the map."></canvas>
+        <canvas id="gameCanvas" width="960" height="600" tabindex="0" role="application" aria-label="Night Shift game map. Use arrow keys or W A S D to move, E to interact, F for flashlight, and C for the audio compass."></canvas>
         <div class="screen-vignette" aria-hidden="true"></div>
         <div class="pause-card" id="pauseCard" hidden><strong>PAUSED</strong><span>Press P to continue</span></div>
       </div>
@@ -53,7 +53,7 @@
     <aside class="side-panel">
       <div class="manager-card">
         <span class="label danger-label">STORE MANAGER</span>
-        <div class="manager-face" aria-hidden="true"><i></i><i></i><b></b></div>
+        <img class="manager-portrait" src="mr-hollow.jpg" alt="Mr. Hollow, a tall pale supermarket manager in an old green vest, holding a heavy ring of keys." />
         <h1 id="gameTitle">MR. HOLLOW</h1>
         <p>He hears running. He sees your flashlight. When the store goes quiet, listen for his keys.</p>
       </div>
@@ -91,6 +91,7 @@
 
   <div class="modal" id="startModal" role="dialog" aria-modal="true" aria-labelledby="startTitle">
     <div class="modal-card">
+      <img class="start-art" src="aisle13-keyart.jpg" alt="A dark abandoned supermarket aisle with Mr. Hollow standing beneath failing fluorescent lights." />
       <p class="kicker">CHAPTER ONE</p>
       <h2 id="startTitle">THE LAST<br />CLOCK-OUT</h2>
       <p>11:47 PM. The market is empty. Your manager should have gone home—but his keys are moving somewhere in Aisle 13.</p>
@@ -114,6 +115,6 @@
   </div>
 
   <p id="liveRegion" class="sr-only" aria-live="assertive" aria-atomic="true"></p>
-  <script src="script.js?v=30"></script>
+  <script src="script.js?v=31"></script>
 </body>
 </html>

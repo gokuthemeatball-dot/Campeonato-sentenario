@@ -46,6 +46,7 @@ let noiseTurns;
 let lastBossMove;
 let patrolIndex;
 let audioContext;
+let ambientGain;
 let lastAnnouncement = '';
 let blindMode = false;
 
@@ -208,6 +209,7 @@ function bossStep(time) {
   const distance = manhattan(player,boss);
   if (distance <= 6) {
     spatialCue(boss.x-player.x, distance <= 2 ? 75 : 105);
+    if (Math.random() < .18) keyRattle(boss.x-player.x);
     if (blindMode && distance === 3) announce(`Danger. Mr. Hollow is ${directionWords(boss.x-player.x,boss.y-player.y)}, three steps away.`,true);
   }
   updateHud();
@@ -280,23 +282,37 @@ function areaName(p){if(p.y<=3)return p.x>=16?'Manager office hall':'Front check
 function directionWords(dx,dy){const vertical=dy<0?'north':dy>0?'south':'';const horizontal=dx<0?'west':dx>0?'east':'';return vertical&&horizontal?`${vertical}-${horizontal}`:vertical||horizontal||'here';}
 function manhattan(a,b){return Math.abs(a.x-b.x)+Math.abs(a.y-b.y);}
 
-function ensureAudio(){if(!audioContext)audioContext=new(window.AudioContext||window.webkitAudioContext)();}
+function ensureAudio(){
+  if(audioContext)return;
+  audioContext=new(window.AudioContext||window.webkitAudioContext)();
+  ambientGain=audioContext.createGain();
+  ambientGain.gain.value=soundToggle.checked?.018:0;
+  ambientGain.connect(audioContext.destination);
+  [46,58,119].forEach((frequency,index)=>{
+    const oscillator=audioContext.createOscillator(),gain=audioContext.createGain();
+    oscillator.type=index===2?'sine':'triangle';
+    oscillator.frequency.value=frequency;
+    gain.gain.value=index===2?.18:.34;
+    oscillator.connect(gain).connect(ambientGain);
+    oscillator.start();
+  });
+}
 function tone(frequency,duration,pan=0){if(!soundToggle.checked)return;ensureAudio();const o=audioContext.createOscillator(),g=audioContext.createGain(),p=audioContext.createStereoPanner?audioContext.createStereoPanner():audioContext.createGain();o.frequency.value=frequency;o.type='triangle';g.gain.setValueAtTime(.055,audioContext.currentTime);g.gain.exponentialRampToValueAtTime(.001,audioContext.currentTime+duration);if('pan'in p)p.pan.value=Math.max(-1,Math.min(1,pan));o.connect(g).connect(p).connect(audioContext.destination);o.start();o.stop(audioContext.currentTime+duration);}
 function spatialCue(dx,frequency){tone(frequency,.13,Math.max(-1,Math.min(1,dx/5)));}
+function keyRattle(dx){[1480,1810,1320].forEach((f,i)=>setTimeout(()=>tone(f,.025,Math.max(-1,Math.min(1,dx/5))),i*42));}
 
 function gameLoop(time){bossStep(time);requestAnimationFrame(gameLoop);}
-document.addEventListener('keydown',event=>{
+window.addEventListener('keydown',event=>{
   if(document.querySelector('#startModal').hidden===false)return;
   const quiet=event.shiftKey;
-  const key=event.key.toLowerCase();
-  const moves={w:[0,-1],arrowup:[0,-1],s:[0,1],arrowdown:[0,1],a:[-1,0],arrowleft:[-1,0],d:[1,0],arrowright:[1,0]};
-  if(moves[key]){event.preventDefault();movePlayer(...moves[key],quiet);}
-  else if(key==='e'||key===' '){event.preventDefault();interact();}
-  else if(key==='c')audioCompass();
-  else if(key==='q')announce(objective(),true);
-  else if(key==='f'){flashlight=!flashlight;announce(`Flashlight ${flashlight?'on':'off'}.`,true);draw();}
-  else if(key==='p'){paused=!paused;document.querySelector('#pauseCard').hidden=!paused;announce(paused?'Game paused.':'Game resumed.',true);}
-});
+  const moves={KeyW:[0,-1],ArrowUp:[0,-1],KeyS:[0,1],ArrowDown:[0,1],KeyA:[-1,0],ArrowLeft:[-1,0],KeyD:[1,0],ArrowRight:[1,0]};
+  if(moves[event.code]){event.preventDefault();movePlayer(...moves[event.code],quiet);}
+  else if(event.code==='KeyE'||event.code==='Space'){event.preventDefault();interact();}
+  else if(event.code==='KeyC'){event.preventDefault();audioCompass();}
+  else if(event.code==='KeyQ'){event.preventDefault();announce(objective(),true);}
+  else if(event.code==='KeyF'){event.preventDefault();flashlight=!flashlight;announce(`Flashlight ${flashlight?'on':'off'}.`,true);tone(flashlight?620:210,.09,0);draw();}
+  else if(event.code==='KeyP'){event.preventDefault();paused=!paused;document.querySelector('#pauseCard').hidden=!paused;announce(paused?'Game paused.':'Game resumed.',true);}
+},{capture:true});
 document.querySelectorAll('[data-move]').forEach(button=>button.addEventListener('click',()=>{
   const map={up:[0,-1],down:[0,1],left:[-1,0],right:[1,0]};movePlayer(...map[button.dataset.move],false);
 }));
@@ -304,11 +320,13 @@ document.querySelector('#touchInteract').addEventListener('click',interact);
 document.querySelector('#compassButton').addEventListener('click',audioCompass);
 document.querySelector('#repeatButton').addEventListener('click',()=>announce(objective(),true));
 document.querySelector('#contrastToggle').addEventListener('change',event=>document.body.classList.toggle('extra-contrast',event.target.checked));
+soundToggle.addEventListener('change',()=>{if(ambientGain)ambientGain.gain.setTargetAtTime(soundToggle.checked?.018:0,audioContext.currentTime,.08);});
 document.querySelector('#startButton').addEventListener('click',()=>{
   blindMode=document.querySelector('#blindModeStart').checked;
   narrationToggle.checked=true;
   document.querySelector('#startModal').hidden=true;
   ensureAudio();resetGame();
+  canvas.focus();
   announce(`Night Shift begins. ${objective()} Press C at any time for the audio compass.`,true);
 });
 document.querySelector('#restartButton').addEventListener('click',()=>{resetGame();announce(objective(),true);});
