@@ -93,19 +93,22 @@ async function processAudio() {
     // Frequency-aware mid/side separation. Removing the filtered center from
     // each original channel keeps the stereo field instead of collapsing the
     // instrumental to a phase-cancelled mono-like result.
-    const centerHighPass = createBiquad('highpass', 95, sampleRate, 0.707);
-    const centerLowPass = createBiquad('lowpass', 14500, sampleRate, 0.707);
+    const centerHighPass = createBiquad('highpass', 165, sampleRate, 0.707);
+    const centerLowPass = createBiquad('lowpass', 9000, sampleRate, 0.707);
     const sideHighPass = createBiquad('highpass', 120, sampleRate, 0.707);
     const sideLowPass = createBiquad('lowpass', 12000, sampleRate, 0.707);
     const blockSize = 2048;
-    let removalStrength = 0.78;
+    let removalStrength = 0.58;
+    let fastEnvelope = 0;
+    let slowEnvelope = 0;
+    let previousMid = 0;
 
     for (let blockStart = 0; blockStart < left.length; blockStart += blockSize) {
       const blockEnd = Math.min(left.length, blockStart + blockSize);
       const correlation = stereoCorrelation(left, right, blockStart, blockEnd);
       const targetStrength = buffer.numberOfChannels > 1
-        ? clamp(0.66 + Math.max(0, correlation) * 0.28, 0.66, 0.94)
-        : 0.72;
+        ? clamp(0.43 + Math.max(0, correlation) * 0.22, 0.43, 0.65)
+        : 0.5;
 
       for (let i = blockStart; i < blockEnd; i++) {
         removalStrength += (targetStrength - removalStrength) * 0.0025;
@@ -113,12 +116,22 @@ async function processAudio() {
         const side = (left[i] - right[i]) * 0.5;
         const centerVocalBand = centerLowPass.process(centerHighPass.process(mid));
         const wideVocalBand = sideLowPass.process(sideHighPass.process(side));
-        const centerToRemove = centerVocalBand * removalStrength;
+        const absoluteMid = Math.abs(mid);
+        fastEnvelope += (absoluteMid - fastEnvelope) * 0.18;
+        slowEnvelope += (absoluteMid - slowEnvelope) * 0.003;
+        const attack = Math.abs(mid - previousMid);
+        previousMid = mid;
+        const transientProtection = clamp(
+          (fastEnvelope - slowEnvelope) * 7 + attack * 2.2,
+          0,
+          0.42
+        );
+        const centerToRemove = centerVocalBand * removalStrength * (1 - transientProtection);
 
         // Subtract equally from the untouched L/R channels. Any stereo
         // ambience and panned instruments remain in their original positions.
-        karaokeLeft[i] = softLimit((left[i] - centerToRemove) * 1.04);
-        karaokeRight[i] = softLimit((right[i] - centerToRemove) * 1.04);
+        karaokeLeft[i] = softLimit((left[i] - centerToRemove) * 1.015);
+        karaokeRight[i] = softLimit((right[i] - centerToRemove) * 1.015);
 
         // Keep a small amount of width around the centered lead vocal so the
         // vocal mix sounds natural on headphones instead of dual-mono.
@@ -136,7 +149,7 @@ async function processAudio() {
     await nextFrame();
     const baseName = selectedFile.name.replace(/\.[^.]+$/, '') || 'karaokelab';
     const tracks = [
-      makeTrack('Stereo instrumental', 'Lead-vocal reduced · original stereo field', `${baseName}-stereo-instrumental.wav`, karaokeLeft, karaokeRight, sampleRate),
+      makeTrack('Producer-preserve instrumental', 'Instruments and stereo image prioritized', `${baseName}-producer-instrumental.wav`, karaokeLeft, karaokeRight, sampleRate),
       makeTrack('Main vocal focus', 'Centered vocal · natural stereo ambience', `${baseName}-main-vocals.wav`, vocalLeft, vocalRight, sampleRate),
       makeTrack('Backing-vocal focus', 'Experimental wide-vocal stereo mix', `${baseName}-backing-vocals.wav`, backingLeft, backingRight, sampleRate)
     ];
